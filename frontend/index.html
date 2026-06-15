@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STT Panca Kerti — Sistem Informasi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══ SIDEBAR NAVIGASI ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-mark">
+        <span class="logo-icon">⛪</span>
+      </div>
+      <div class="logo-text">
+        <span class="logo-title">STT Panca Kerti</span>
+        <span class="logo-sub">Sistem Informasi</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+        <span class="nav-icon">◈</span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-item" data-page="absensi" onclick="navigateTo('absensi')">
+        <span class="nav-icon">✓</span>
+        <span class="nav-label">Absensi</span>
+      </button>
+      <button class="nav-item" data-page="keuangan" onclick="navigateTo('keuangan')">
+        <span class="nav-icon">◎</span>
+        <span class="nav-label">Keuangan</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="connection-status" id="connectionStatus">
+        <span class="status-dot"></span>
+        <span class="status-text">Menghubungkan...</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ OVERLAY MOBILE ═══ -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main-content">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-date" id="topbarDate"></div>
+    </header>
+
+    <!-- ─── PAGE: DASHBOARD ─── -->
+    <section class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1 class="page-title">Selamat Datang</h1>
+        <p class="page-subtitle">Ringkasan aktivitas organisasi STT Panca Kerti</p>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stats-grid">
+        <div class="stat-card gold">
+          <div class="stat-label">Saldo Kas</div>
+          <div class="stat-value" id="dashSaldo">Memuat...</div>
+          <div class="stat-meta">Total pemasukan dikurangi pengeluaran</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Pemasukan</div>
+          <div class="stat-value green" id="dashPemasukan">Memuat...</div>
+          <div class="stat-meta">Akumulasi seluruh pemasukan</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Pengeluaran</div>
+          <div class="stat-value red" id="dashPengeluaran">Memuat...</div>
+          <div class="stat-meta">Akumulasi seluruh pengeluaran</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Catatan Absensi</div>
+          <div class="stat-value" id="dashAbsensiCount">Memuat...</div>
+          <div class="stat-meta">Total record yang tersimpan</div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card mt-6">
+        <div class="card-header">
+          <h2 class="card-title">Transaksi Terakhir</h2>
+          <button class="btn-link" onclick="navigateTo('keuangan')">Lihat Semua →</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="dashRecentTable">
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Jenis</th>
+                <th>Kategori</th>
+                <th>Nominal</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody id="dashRecentBody">
+              <tr><td colspan="5" class="empty-row">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── PAGE: ABSENSI ─── -->
+    <section class="page" id="page-absensi">
+      <div class="page-header">
+        <h1 class="page-title">Modul Absensi</h1>
+        <p class="page-subtitle">Catat dan pantau kehadiran anggota</p>
+      </div>
+
+      <div class="two-col">
+        <!-- Form Absensi -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Tambah Absensi</h2>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Tanggal <span class="required">*</span></label>
+              <input type="date" class="form-input" id="absT" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama Anggota <span class="required">*</span></label>
+              <input type="text" class="form-input" id="absNama" placeholder="Nama lengkap anggota" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status Kehadiran <span class="required">*</span></label>
+              <select class="form-input" id="absStatus">
+                <option value="">— Pilih Status —</option>
+                <option value="Hadir">✅ Hadir</option>
+                <option value="Izin">📋 Izin</option>
+                <option value="Sakit">🏥 Sakit</option>
+                <option value="Alfa">❌ Alfa</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Keterangan</label>
+              <textarea class="form-input" id="absKet" rows="3" placeholder="Keterangan tambahan (opsional)"></textarea>
+            </div>
+            <div id="absAlert" class="alert hidden"></div>
+            <button class="btn-primary w-full" id="absSubmitBtn" onclick="submitAbsensi()">
+              <span class="btn-text">Simpan Absensi</span>
+              <span class="btn-loading hidden">Menyimpan...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & Stats Absensi -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Filter Data</h2>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Cari Nama</label>
+              <input type="text" class="form-input" id="absFilterNama" placeholder="Ketik nama..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Filter Tanggal</label>
+              <input type="date" class="form-input" id="absFilterTanggal" />
+            </div>
+            <button class="btn-secondary w-full" onclick="loadAbsensi()">Tampilkan Data</button>
+            <button class="btn-ghost w-full mt-2" onclick="resetFilterAbsensi()">Reset Filter</button>
+          </div>
+
+          <!-- Mini rekap status -->
+          <div class="status-rekap" id="absRekapStatus">
+            <div class="rekap-item hadir"><span id="rekHadir">0</span><span>Hadir</span></div>
+            <div class="rekap-item izin"><span id="rekIzin">0</span><span>Izin</span></div>
+            <div class="rekap-item sakit"><span id="rekSakit">0</span><span>Sakit</span></div>
+            <div class="rekap-item alfa"><span id="rekAlfa">0</span><span>Alfa</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabel Absensi -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title">Riwayat Absensi</h2>
+          <span class="badge" id="absBadge">— data</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Nama</th>
+                <th>Status</th>
+                <th>Keterangan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="absTableBody">
+              <tr><td colspan="5" class="empty-row">Klik "Tampilkan Data" untuk memuat data</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── PAGE: KEUANGAN ─── -->
+    <section class="page" id="page-keuangan">
+      <div class="page-header">
+        <h1 class="page-title">Modul Keuangan</h1>
+        <p class="page-subtitle">Pencatatan pemasukan dan pengeluaran kas</p>
+      </div>
+
+      <!-- Ringkasan Saldo -->
+      <div class="saldo-banner" id="saldoBanner">
+        <div class="saldo-item">
+          <span class="saldo-label">Saldo Kas</span>
+          <span class="saldo-value" id="keuSaldo">Memuat...</span>
+        </div>
+        <div class="saldo-divider"></div>
+        <div class="saldo-item">
+          <span class="saldo-label">Pemasukan</span>
+          <span class="saldo-value green" id="keuPemasukan">—</span>
+        </div>
+        <div class="saldo-divider"></div>
+        <div class="saldo-item">
+          <span class="saldo-label">Pengeluaran</span>
+          <span class="saldo-value red" id="keuPengeluaran">—</span>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Form Keuangan -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Tambah Transaksi</h2>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Tanggal <span class="required">*</span></label>
+              <input type="date" class="form-input" id="keuT" />
+            </div>
+            <!-- Toggle Jenis: visual pill -->
+            <div class="form-group">
+              <label class="form-label">Jenis Transaksi <span class="required">*</span></label>
+              <div class="jenis-toggle">
+                <button class="jenis-btn active" id="btnPemasukan" onclick="setJenis('Pemasukan')">
+                  ↑ Pemasukan
+                </button>
+                <button class="jenis-btn" id="btnPengeluaran" onclick="setJenis('Pengeluaran')">
+                  ↓ Pengeluaran
+                </button>
+              </div>
+              <input type="hidden" id="keuJenis" value="Pemasukan" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori <span class="required">*</span></label>
+              <select class="form-input" id="keuKategori">
+                <option value="">— Pilih Kategori —</option>
+                <optgroup label="Pemasukan" id="optPemasukan">
+                  <option value="Iuran Anggota">Iuran Anggota</option>
+                  <option value="Donasi">Donasi</option>
+                  <option value="Persembahan">Persembahan</option>
+                  <option value="Penjualan">Penjualan</option>
+                  <option value="Lainnya">Lainnya</option>
+                </optgroup>
+                <optgroup label="Pengeluaran" id="optPengeluaran">
+                  <option value="Konsumsi">Konsumsi</option>
+                  <option value="Perlengkapan">Perlengkapan</option>
+                  <option value="Transportasi">Transportasi</option>
+                  <option value="Administrasi">Administrasi</option>
+                  <option value="Sosial">Sosial</option>
+                  <option value="Lainnya">Lainnya</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nominal (Rp) <span class="required">*</span></label>
+              <div class="input-prefix-wrap">
+                <span class="input-prefix">Rp</span>
+                <input type="number" class="form-input with-prefix" id="keuNominal"
+                  placeholder="0" min="1" step="1000" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Keterangan</label>
+              <textarea class="form-input" id="keuKet" rows="3"
+                placeholder="Keterangan transaksi (opsional)"></textarea>
+            </div>
+            <div id="keuAlert" class="alert hidden"></div>
+            <button class="btn-primary w-full" id="keuSubmitBtn" onclick="submitKeuangan()">
+              <span class="btn-text">Simpan Transaksi</span>
+              <span class="btn-loading hidden">Menyimpan...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Keuangan -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Filter Data</h2>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Filter Jenis</label>
+              <select class="form-input" id="keuFilterJenis">
+                <option value="">Semua Transaksi</option>
+                <option value="Pemasukan">Pemasukan</option>
+                <option value="Pengeluaran">Pengeluaran</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Filter Kategori</label>
+              <input type="text" class="form-input" id="keuFilterKat" placeholder="Ketik kategori..." />
+            </div>
+            <button class="btn-secondary w-full" onclick="loadKeuangan()">Tampilkan Data</button>
+            <button class="btn-ghost w-full mt-2" onclick="resetFilterKeuangan()">Reset Filter</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabel Keuangan -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title">Riwayat Transaksi</h2>
+          <span class="badge" id="keuBadge">— data</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Jenis</th>
+                <th>Kategori</th>
+                <th>Nominal</th>
+                <th>Keterangan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="keuTableBody">
+              <tr><td colspan="6" class="empty-row">Klik "Tampilkan Data" untuk memuat data</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Konfirmasi Hapus -->
+  <div class="modal-backdrop hidden" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-icon">⚠️</div>
+      <h3 class="modal-title">Hapus Data?</h3>
+      <p class="modal-body" id="modalBody">Data ini akan dihapus permanen dari spreadsheet.</p>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closeModal()">Batal</button>
+        <button class="btn-danger" id="modalConfirmBtn">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
