@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Absensi — STT Panca Kerti</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <style>
+    :root {
+      --navy: #1E2B4A;
+      --gold: #C9A84C;
+      --bg: #F5F7FA;
+      --surface: #FFFFFF;
+      --text: #2D3748;
+      --muted: #718096;
+      --border: #E2E8F0;
+      --green: #2F855A;
+      --green-bg: #F0FFF4;
+      --red: #C53030;
+      --red-bg: #FFF5F5;
+      --radius: 14px;
+      --shadow: 0 4px 20px rgba(0,0,0,.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(160deg, var(--navy) 0%, #2A3B62 40%, var(--bg) 40%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px;
+      color: var(--text);
+    }
+    .wrap { width: 100%; max-width: 440px; }
+
+    .header {
+      text-align: center;
+      color: #fff;
+      margin-bottom: 20px;
+      padding-top: 10px;
+    }
+    .header img {
+      width: 64px; height: 64px;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 14px;
+      padding: 6px;
+      margin-bottom: 10px;
+    }
+    .header h1 { font-size: 1.15rem; font-weight: 700; }
+    .header p { font-size: .8rem; opacity: .8; margin-top: 2px; }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+
+    .sesi-info {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+    .sesi-info .label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+    .sesi-info .value { font-size: 1rem; font-weight: 700; color: var(--navy); margin-top: 2px; }
+    .sesi-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
+    .sesi-row > div { flex: 1; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block; font-size: .82rem; font-weight: 600;
+      color: var(--text); margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--border); border-radius: 9px;
+      font-family: inherit; font-size: .92rem; color: var(--text);
+      background: var(--bg);
+    }
+    .form-input:focus { outline: none; border-color: var(--gold); background: #fff; }
+
+    .status-options { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+    .status-option {
+      border: 1.5px solid var(--border); border-radius: 9px;
+      padding: 12px 8px; text-align: center; cursor: pointer;
+      font-size: .85rem; font-weight: 600; color: var(--muted);
+      transition: all .15s ease; background: var(--bg);
+    }
+    .status-option.selected {
+      border-color: var(--navy); background: var(--navy); color: #fff;
+    }
+
+    .btn-primary {
+      width: 100%; padding: 15px;
+      background: var(--navy); color: #fff;
+      border: none; border-radius: 10px;
+      font-family: inherit; font-size: .95rem; font-weight: 700;
+      cursor: pointer; transition: opacity .15s ease;
+    }
+    .btn-primary:active { opacity: .85; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    .alert {
+      padding: 12px 14px; border-radius: 9px;
+      font-size: .85rem; margin-bottom: 14px;
+    }
+    .alert.error   { background: var(--red-bg); color: var(--red); border: 1px solid #FEB2B2; }
+    .alert.success { background: var(--green-bg); color: var(--green); border: 1px solid #9AE6B4; }
+    .hidden { display: none !important; }
+
+    .state-box { text-align: center; padding: 30px 10px; }
+    .state-icon { font-size: 3rem; margin-bottom: 12px; }
+    .state-title { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .state-desc { font-size: .88rem; color: var(--muted); line-height: 1.5; }
+
+    .footer-note { text-align:center; font-size:.72rem; color:rgba(255,255,255,.6); margin-top: 10px; }
+
+    datalist { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="header">
+      <img src="logo.png" alt="Logo" />
+      <h1>STT Panca Kerti</h1>
+      <p>Absensi Kegiatan Mandiri</p>
+    </div>
+
+    <!-- Loading State -->
+    <div class="card" id="loadingState">
+      <div class="state-box">
+        <div class="state-icon">⏳</div>
+        <div class="state-title">Memuat sesi...</div>
+        <div class="state-desc">Mohon tunggu sebentar.</div>
+      </div>
+    </div>
+
+    <!-- Error State (sesi tidak valid / ditutup) -->
+    <div class="card hidden" id="errorState">
+      <div class="state-box">
+        <div class="state-icon">⚠️</div>
+        <div class="state-title">QR Tidak Valid</div>
+        <div class="state-desc" id="errorMsg">Sesi absensi ini tidak ditemukan atau sudah ditutup.</div>
+      </div>
+    </div>
+
+    <!-- Form Absen -->
+    <div class="card hidden" id="formState">
+      <div class="sesi-info">
+        <div class="label">Kegiatan</div>
+        <div class="value" id="infoKategori">—</div>
+        <div class="sesi-row">
+          <div>
+            <div class="label">Tempat</div>
+            <div class="value" style="font-size:.85rem;" id="infoTempat">—</div>
+          </div>
+          <div>
+            <div class="label">Tanggal</div>
+            <div class="value" style="font-size:.85rem;" id="infoTanggal">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="formAlert" class="alert hidden"></div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Lengkap <span style="color:var(--red)">*</span></label>
+        <input type="text" class="form-input" id="inputNama" list="listNama" placeholder="Ketik atau pilih nama Anda" autocomplete="off" />
+        <datalist id="listNama"></datalist>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status Kehadiran <span style="color:var(--red)">*</span></label>
+        <div class="status-options" id="statusOptions">
+          <div class="status-option" data-val="Hadir">✅ Hadir</div>
+          <div class="status-option" data-val="Izin">📋 Izin</div>
+          <div class="status-option" data-val="Sakit">🏥 Sakit</div>
+          <div class="status-option" data-val="Alfa">❌ Alfa</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Keterangan (opsional)</label>
+        <input type="text" class="form-input" id="inputKet" placeholder="Catatan tambahan..." />
+      </div>
+
+      <button class="btn-primary" id="submitBtn" onclick="submitAbsen()">Submit Absensi</button>
+    </div>
+
+    <!-- Success State -->
+    <div class="card hidden" id="successState">
+      <div class="state-box">
+        <div class="state-icon">✅</div>
+        <div class="state-title">Absensi Tersimpan!</div>
+        <div class="state-desc" id="successMsg">Terima kasih telah mengisi absensi.</div>
+      </div>
+    </div>
+
+    <div class="footer-note">© STT Panca Kerti — Sistem Informasi</div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbxMtRRVkAhz3R6g4TDgFA5Qn_U1TwyQ-UZKVSjXNdCEDjly62VjClEsJNtYDgy80T2-/exec";
+
+    let sesiData = null;
+    let statusTerpilih = "";
+
+    function getKodeFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("kode");
+    }
+
+    async function fetchAPI(action, params = {}) {
+      const url = new URL(API_URL);
+      url.searchParams.set("action", action);
+      url.searchParams.set("payload", JSON.stringify(params));
+      Object.keys(params).forEach(k => {
+        if (typeof params[k] === "string") url.searchParams.set(k, params[k]);
+      });
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.status !== "success") throw new Error(json.message || "Gagal memuat data.");
+      return json;
+    }
+
+    async function writeAPI(action, data) {
+      const url = new URL(API_URL);
+      url.searchParams.set("action", action);
+      url.searchParams.set("payload", JSON.stringify(data));
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.status !== "success") throw new Error(json.message || "Gagal menyimpan data.");
+      return json;
+    }
+
+    function showState(id) {
+      ["loadingState","errorState","formState","successState"].forEach(s => {
+        document.getElementById(s).classList.toggle("hidden", s !== id);
+      });
+    }
+
+    async function init() {
+      const kode = getKodeFromURL();
+      if (!kode) {
+        document.getElementById("errorMsg").textContent = "Kode sesi tidak ditemukan di URL.";
+        showState("errorState");
+        return;
+      }
+
+      try {
+        const result = await fetchAPI("getSesiQR", { kode });
+        sesiData = result.data;
+
+        if (sesiData.statusSesi !== "Aktif") {
+          document.getElementById("errorMsg").textContent = "Sesi absensi ini sudah ditutup oleh admin.";
+          showState("errorState");
+          return;
+        }
+
+        document.getElementById("infoKategori").textContent = sesiData.kategori;
+        document.getElementById("infoTempat").textContent    = sesiData.tempat;
+        document.getElementById("infoTanggal").textContent   = formatTanggalIndo(sesiData.tanggal);
+
+        await loadDaftarNama();
+        showState("formState");
+      } catch (err) {
+        document.getElementById("errorMsg").textContent = err.message;
+        showState("errorState");
+      }
+    }
+
+    async function loadDaftarNama() {
+      try {
+        const result = await fetchAPI("getAnggota");
+        const datalist = document.getElementById("listNama");
+        (result.data || []).forEach(a => {
+          const opt = document.createElement("option");
+          opt.value = a.nama;
+          datalist.appendChild(opt);
+        });
+      } catch (e) { /* gagal load nama, biarkan input manual */ }
+    }
+
+    function formatTanggalIndo(str) {
+      if (!str) return "—";
+      const d = new Date(str);
+      const hari = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+      const bulan = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+      return hari[d.getDay()] + ", " + d.getDate() + " " + bulan[d.getMonth()] + " " + d.getFullYear();
+    }
+
+    document.querySelectorAll(".status-option").forEach(el => {
+      el.addEventListener("click", () => {
+        document.querySelectorAll(".status-option").forEach(o => o.classList.remove("selected"));
+        el.classList.add("selected");
+        statusTerpilih = el.dataset.val;
+      });
+    });
+
+    function showAlert(type, msg) {
+      const box = document.getElementById("formAlert");
+      box.textContent = msg;
+      box.className = "alert " + type;
+      box.classList.remove("hidden");
+    }
+
+    async function submitAbsen() {
+      const nama = document.getElementById("inputNama").value.trim();
+      const ket  = document.getElementById("inputKet").value.trim();
+
+      if (!nama) { showAlert("error", "Nama wajib diisi."); return; }
+      if (!statusTerpilih) { showAlert("error", "Pilih status kehadiran Anda."); return; }
+
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.textContent = "Menyimpan...";
+
+      try {
+        const kode = getKodeFromURL();
+        const result = await writeAPI("absenViaQR", {
+          kode, nama, status: statusTerpilih, keterangan: ket
+        });
+        document.getElementById("successMsg").textContent =
+          "Terima kasih, " + nama + "! Absensi Anda untuk kegiatan " + sesiData.kategori + " telah tersimpan.";
+        showState("successState");
+      } catch (err) {
+        showAlert("error", err.message);
+        btn.disabled = false;
+        btn.textContent = "Submit Absensi";
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

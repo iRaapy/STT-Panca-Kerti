@@ -13,6 +13,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -43,6 +44,9 @@
       </button>
       <button class="nav-item" data-page="dokumen" onclick="navigateTo('dokumen')">
         <span class="nav-icon">🗂️</span><span class="nav-label">Dokumen</span>
+      </button>
+      <button class="nav-item" data-page="qr" onclick="navigateTo('qr')">
+        <span class="nav-icon">▦</span><span class="nav-label">Absen via QR</span>
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -687,6 +691,103 @@
             </thead>
             <tbody id="docTableBody">
               <tr><td colspan="4" class="empty-row">Klik Refresh untuk memuat dokumen.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── ABSEN VIA QR ─── -->
+    <section class="page" id="page-qr">
+      <div class="page-header">
+        <h1 class="page-title">Absen via QR Code</h1>
+        <p class="page-subtitle">Buat QR sekali pakai per kegiatan untuk absensi mandiri anggota</p>
+      </div>
+
+      <div class="two-col">
+        <!-- Form Generate QR -->
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Buat Sesi Absensi Baru</h2></div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Tanggal Kegiatan <span class="required">*</span></label>
+              <input type="date" class="form-input" id="qrTanggal" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori Kegiatan <span class="required">*</span></label>
+              <select class="form-input" id="qrKategori">
+                <option value="">— Pilih Kategori —</option>
+                <option value="Ngayah">Ngayah</option>
+                <option value="Mereresik">Mereresik</option>
+                <option value="Mengekmit">Mengekmit</option>
+                <option value="Sangkep">Sangkep</option>
+                <option value="Kegiatan Ulang Tahun">Kegiatan Ulang Tahun</option>
+                <option value="Kegiatan Ogoh-ogoh">Kegiatan Ogoh-ogoh</option>
+                <option value="Kegiatan Lainnya">Kegiatan Lainnya</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tempat <span class="required">*</span></label>
+              <select class="form-input" id="qrTempat">
+                <option value="">— Pilih Tempat —</option>
+                <option value="Pura Pucak Sari">Pura Pucak Sari</option>
+                <option value="Pura Nataran Sari">Pura Nataran Sari</option>
+                <option value="Pura Puseh">Pura Puseh</option>
+                <option value="Pura Desa">Pura Desa</option>
+                <option value="Pura Nataran Agung">Pura Nataran Agung</option>
+                <option value="Pura Kancing Gumi">Pura Kancing Gumi</option>
+                <option value="Pura Dalem">Pura Dalem</option>
+                <option value="Pura Dugul">Pura Dugul</option>
+                <option value="Bale Banjar">Bale Banjar</option>
+                <option value="Sema">Sema</option>
+                <option value="Wantilan">Wantilan</option>
+                <option value="Lapangan">Lapangan</option>
+                <option value="Air Terjun Gua Gong">Air Terjun Gua Gong</option>
+                <option value="Sekitar Banjar">Sekitar Banjar</option>
+                <option value="Tempat Lainnya">Tempat Lainnya</option>
+              </select>
+            </div>
+            <div id="qrAlert" class="alert hidden"></div>
+            <button class="btn-primary w-full" id="qrSubmitBtn" onclick="buatSesiQR()">
+              <span class="btn-text">▦ Generate QR Code</span>
+              <span class="btn-loading hidden">Membuat...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tampilan QR Hasil -->
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">QR Code Kegiatan</h2></div>
+          <div class="form-body" style="text-align:center;">
+            <div id="qrPlaceholder" class="rekap-placeholder" style="padding:30px 10px;">
+              <div class="placeholder-icon">▦</div>
+              <p>Isi form di samping lalu klik <strong>Generate QR Code</strong></p>
+            </div>
+            <div id="qrResult" class="hidden">
+              <div id="qrCodeBox" class="qr-box"></div>
+              <div id="qrInfoBox" class="qr-info"></div>
+              <div style="display:flex;gap:8px;margin-top:14px;">
+                <button class="btn-export-lg" onclick="downloadQR()">⬇ Download QR</button>
+                <button class="btn-export-lg" onclick="cetakQR()">🖨 Cetak QR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Riwayat Sesi QR -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title">Riwayat Sesi Absensi QR</h2>
+          <button class="btn-secondary-sm" onclick="loadDaftarSesiQR()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Kode</th><th>Tanggal</th><th>Kategori</th><th>Tempat</th><th>Status</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="qrSesiTableBody">
+              <tr><td colspan="6" class="empty-row">Klik Refresh untuk memuat.</td></tr>
             </tbody>
           </table>
         </div>
