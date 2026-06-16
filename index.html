@@ -135,6 +135,14 @@
               </select>
             </div>
             <div class="form-group">
+              <label class="form-label">Status Keanggotaan</label>
+              <select class="form-input" id="angStatusKeanggotaan">
+                <option value="Aktif">Aktif</option>
+                <option value="Pengampel">Pengampel</option>
+                <option value="Nonaktif">Nonaktif</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label">No. HP / Kontak</label>
               <input type="text" class="form-input" id="angKontak" placeholder="08xxxxxxxxxx (opsional)" />
             </div>
@@ -184,7 +192,7 @@
         <div class="table-wrap">
           <table class="data-table">
             <thead>
-              <tr><th>No</th><th>Nama</th><th>Jabatan</th><th>Kontak</th><th>Aksi</th></tr>
+              <tr><th>No</th><th>Nama</th><th>Jabatan</th><th>Status</th><th>Kontak</th><th>Aksi</th></tr>
             </thead>
             <tbody id="angTableBody">
               <tr><td colspan="5" class="empty-row">Memuat data...</td></tr>
@@ -224,6 +232,39 @@
                 <option value="Izin">📋 Izin</option>
                 <option value="Sakit">🏥 Sakit</option>
                 <option value="Alfa">❌ Alfa</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori Kegiatan <span class="required">*</span></label>
+              <select class="form-input" id="absKategori">
+                <option value="">— Pilih Kategori —</option>
+                <option value="Ngayah">Ngayah</option>
+                <option value="Mengekmit">Mengekmit</option>
+                <option value="Sangkep">Sangkep</option>
+                <option value="Kegiatan Ulang Tahun">Kegiatan Ulang Tahun</option>
+                <option value="Kegiatan Ogoh-ogoh">Kegiatan Ogoh-ogoh</option>
+                <option value="Kegiatan Lainnya">Kegiatan Lainnya</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tempat <span class="required">*</span></label>
+              <select class="form-input" id="absTempat">
+                <option value="">— Pilih Tempat —</option>
+                <option value="Pura Pucak Sari">Pura Pucak Sari</option>
+                <option value="Pura Nataran Sari">Pura Nataran Sari</option>
+                <option value="Pura Puseh">Pura Puseh</option>
+                <option value="Pura Desa">Pura Desa</option>
+                <option value="Pura Nataran Agung">Pura Nataran Agung</option>
+                <option value="Pura Kancing Gumi">Pura Kancing Gumi</option>
+                <option value="Pura Dalem">Pura Dalem</option>
+                <option value="Pura Dugul">Pura Dugul</option>
+                <option value="Bale Banjar">Bale Banjar</option>
+                <option value="Sema">Sema</option>
+                <option value="Wantilan">Wantilan</option>
+                <option value="Lapangan">Lapangan</option>
+                <option value="Air Terjun Gua Gong">Air Terjun Gua Gong</option>
+                <option value="Sekitar Banjar">Sekitar Banjar</option>
+                <option value="Tempat Lainnya">Tempat Lainnya</option>
               </select>
             </div>
             <div class="form-group">
@@ -267,10 +308,10 @@
         <div class="table-wrap">
           <table class="data-table">
             <thead>
-              <tr><th>Tanggal</th><th>Nama</th><th>Status</th><th>Keterangan</th><th>Aksi</th></tr>
+              <tr><th>Tanggal</th><th>Nama</th><th>Status</th><th>Kategori</th><th>Tempat</th><th>Keterangan</th><th>Aksi</th></tr>
             </thead>
             <tbody id="absTableBody">
-              <tr><td colspan="5" class="empty-row">Klik "Tampilkan Data" untuk memuat</td></tr>
+              <tr><td colspan="7" class="empty-row">Klik "Tampilkan Data" untuk memuat</td></tr>
             </tbody>
           </table>
         </div>

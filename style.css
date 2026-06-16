@@ -922,3 +922,28 @@ select.form-input { cursor: pointer; }
 .stats-grid {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
+
+/* ─── STATUS KEANGGOTAAN BADGE ──────────────────────────────── */
+.status-keanggotaan-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.status-keanggotaan-badge.aktif {
+  background: #F0FFF4;
+  color: #2F855A;
+  border: 1px solid #9AE6B4;
+}
+.status-keanggotaan-badge.pengampel {
+  background: #EBF8FF;
+  color: #2B6CB0;
+  border: 1px solid #90CDF4;
+}
+.status-keanggotaan-badge.nonaktif {
+  background: #FFF5F5;
+  color: #C53030;
+  border: 1px solid #FEB2B2;
+}

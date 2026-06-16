@@ -184,19 +184,21 @@ function renderDashRecentTable(rows) {
 
 // ═══ MODUL ANGGOTA ════════════════════════════════════════
 async function submitAnggota() {
-  const nama    = document.getElementById("angNama").value.trim();
-  const jabatan = document.getElementById("angJabatan").value;
-  const kontak  = document.getElementById("angKontak").value.trim();
+  const nama               = document.getElementById("angNama").value.trim();
+  const jabatan            = document.getElementById("angJabatan").value;
+  const kontak             = document.getElementById("angKontak").value.trim();
+  const statusKeanggotaan  = document.getElementById("angStatusKeanggotaan").value;
 
   if (!nama) { showAlert("angAlert", "error", "Nama anggota wajib diisi."); return; }
 
   setLoading("angSubmitBtn", true);
   try {
-    await writeAPI("tambahAnggota", { nama, jabatan, kontak });
+    await writeAPI("tambahAnggota", { nama, jabatan, kontak, statusKeanggotaan });
     showAlert("angAlert", "success", "✅ Anggota berhasil ditambahkan!");
-    document.getElementById("angNama").value   = "";
-    document.getElementById("angKontak").value = "";
-    document.getElementById("angJabatan").value = "Anggota";
+    document.getElementById("angNama").value                  = "";
+    document.getElementById("angKontak").value                = "";
+    document.getElementById("angJabatan").value               = "Anggota";
+    document.getElementById("angStatusKeanggotaan").value     = "Aktif";
     loadAnggota();
   } catch (err) {
     showAlert("angAlert", "error", "❌ Gagal: " + err.message);
@@ -218,7 +220,7 @@ async function loadAnggota() {
     updateDropdownAnggota();
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Belum ada anggota terdaftar.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Belum ada anggota terdaftar.</td></tr>`;
       return;
     }
 
@@ -229,6 +231,7 @@ async function loadAnggota() {
           <div class="anggota-nama">${r.nama}</div>
         </td>
         <td><span class="jabatan-badge">${r.jabatan || "Anggota"}</span></td>
+        <td><span class="status-keanggotaan-badge ${(r.statusKeanggotaan || 'aktif').toLowerCase()}">${r.statusKeanggotaan || "Aktif"}</span></td>
         <td>${r.kontak || "—"}</td>
         <td>
           <button class="btn-hapus" onclick="konfirmasiHapus('anggota', '${r.id}', '${r.nama}')">
@@ -238,7 +241,7 @@ async function loadAnggota() {
       </tr>
     `).join("");
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty-row">❌ Error: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-row">❌ Error: ${err.message}</td></tr>`;
   }
 }
 
@@ -256,20 +259,24 @@ async function submitAbsensi() {
   const tanggal    = document.getElementById("absT").value;
   const nama       = document.getElementById("absNama").value.trim();
   const status     = document.getElementById("absStatus").value;
+  const kategori   = document.getElementById("absKategori").value;
+  const tempat     = document.getElementById("absTempat").value;
   const keterangan = document.getElementById("absKet").value.trim();
 
-  if (!tanggal || !nama || !status) {
-    showAlert("absAlert", "error", "Tanggal, nama, dan status wajib diisi.");
+  if (!tanggal || !nama || !status || !kategori || !tempat) {
+    showAlert("absAlert", "error", "Tanggal, nama, status, kategori, dan tempat wajib diisi.");
     return;
   }
 
   setLoading("absSubmitBtn", true);
   try {
-    await writeAPI("tambahAbsensi", { tanggal, nama, status, keterangan });
+    await writeAPI("tambahAbsensi", { tanggal, nama, status, kategori, tempat, keterangan });
     showAlert("absAlert", "success", "✅ Absensi berhasil disimpan!");
-    document.getElementById("absNama").value   = "";
-    document.getElementById("absStatus").value = "";
-    document.getElementById("absKet").value    = "";
+    document.getElementById("absNama").value      = "";
+    document.getElementById("absStatus").value    = "";
+    document.getElementById("absKategori").value  = "";
+    document.getElementById("absTempat").value    = "";
+    document.getElementById("absKet").value       = "";
     loadAbsensi();
   } catch (err) {
     showAlert("absAlert", "error", "❌ Gagal: " + err.message);
@@ -282,7 +289,7 @@ async function loadAbsensi() {
   const nama    = document.getElementById("absFilterNama").value.trim();
   const tanggal = document.getElementById("absFilterTanggal").value;
   const tbody   = document.getElementById("absTableBody");
-  tbody.innerHTML = `<tr class="loading-row"><td colspan="5">Memuat data...</td></tr>`;
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="7">Memuat data...</td></tr>`;
 
   try {
     const params = {};
@@ -296,7 +303,7 @@ async function loadAbsensi() {
     updateAbsensiRekap(rows);
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Tidak ada data absensi.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-row">Tidak ada data absensi.</td></tr>`;
       return;
     }
 
@@ -305,12 +312,14 @@ async function loadAbsensi() {
         <td>${formatTanggal(r.tanggal)}</td>
         <td><strong>${r.nama}</strong></td>
         <td><span class="status-badge ${r.status.toLowerCase()}">${r.status}</span></td>
+        <td>${r.kategori || "—"}</td>
+        <td>${r.tempat || "—"}</td>
         <td>${r.keterangan || "—"}</td>
         <td><button class="btn-hapus" onclick="konfirmasiHapus('absensi', '${r.id}', '${r.nama}')">Hapus</button></td>
       </tr>
     `).join("");
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-row">❌ Error: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-row">❌ Error: ${err.message}</td></tr>`;
   }
 }
 
