@@ -947,3 +947,9 @@ select.form-input { cursor: pointer; }
   color: #C53030;
   border: 1px solid #FEB2B2;
 }
+
+.status-keanggotaan-badge.pengurus {
+  background: #FAF5FF;
+  color: #6B46C1;
+  border: 1px solid #D6BCFA;
+}

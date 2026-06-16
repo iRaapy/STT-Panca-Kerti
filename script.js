@@ -209,40 +209,55 @@ async function submitAnggota() {
 
 async function loadAnggota() {
   const tbody = document.getElementById("angTableBody");
-  tbody.innerHTML = `<tr class="loading-row"><td colspan="4">Memuat data...</td></tr>`;
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="6">Memuat data...</td></tr>`;
   try {
     const result = await fetchAPI("getAnggota");
-    const rows   = result.data || [];
-
-    // Update badge & cache
-    document.getElementById("angBadge").textContent = rows.length + " anggota";
-    daftarAnggota = rows;
+    daftarAnggota = result.data || [];
     updateDropdownAnggota();
-
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Belum ada anggota terdaftar.</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = rows.map((r, i) => `
-      <tr>
-        <td><span class="nomor-urut">${i + 1}</span></td>
-        <td>
-          <div class="anggota-nama">${r.nama}</div>
-        </td>
-        <td><span class="jabatan-badge">${r.jabatan || "Anggota"}</span></td>
-        <td><span class="status-keanggotaan-badge ${(r.statusKeanggotaan || 'aktif').toLowerCase()}">${r.statusKeanggotaan || "Aktif"}</span></td>
-        <td>${r.kontak || "—"}</td>
-        <td>
-          <button class="btn-hapus" onclick="konfirmasiHapus('anggota', '${r.id}', '${r.nama}')">
-            Hapus
-          </button>
-        </td>
-      </tr>
-    `).join("");
+    document.getElementById("angBadge").textContent = daftarAnggota.length + " anggota";
+    filterTabelAnggota(); // render dengan filter aktif
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="6" class="empty-row">❌ Error: ${err.message}</td></tr>`;
   }
+}
+
+function filterTabelAnggota() {
+  const cariNama   = (document.getElementById("angFilterNama")?.value || "").toLowerCase().trim();
+  const cariStatus = (document.getElementById("angFilterStatus")?.value || "");
+
+  let filtered = daftarAnggota;
+  if (cariNama)   filtered = filtered.filter(r => r.nama.toLowerCase().includes(cariNama));
+  if (cariStatus) filtered = filtered.filter(r => (r.statusKeanggotaan || "Aktif") === cariStatus);
+
+  renderTabelAnggota(filtered);
+}
+
+function resetFilterAnggota() {
+  document.getElementById("angFilterNama").value   = "";
+  document.getElementById("angFilterStatus").value = "";
+  filterTabelAnggota();
+}
+
+function renderTabelAnggota(rows) {
+  const tbody = document.getElementById("angTableBody");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Tidak ada anggota yang sesuai filter.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td><span class="nomor-urut">${i + 1}</span></td>
+      <td><div class="anggota-nama">${r.nama}</div></td>
+      <td><span class="jabatan-badge">${r.jabatan || "Anggota"}</span></td>
+      <td><span class="status-keanggotaan-badge ${(r.statusKeanggotaan || 'aktif').toLowerCase()}">${r.statusKeanggotaan || "Aktif"}</span></td>
+      <td>${r.kontak || "—"}</td>
+      <td>
+        <button class="btn-hapus" onclick="konfirmasiHapus('anggota', '${r.id}', '${r.nama}')">
+          Hapus
+        </button>
+      </td>
+    </tr>
+  `).join("");
 }
 
 /** Update dropdown nama di form Absensi */
