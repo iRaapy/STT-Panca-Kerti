@@ -1,5 +1,5 @@
 // ─── KONFIGURASI ────────────────────────────────────────────
-const API_URL = "https://script.google.com/macros/s/AKfycbxMtRRVkAhz3R6g4TDgFA5Qn_U1TwyQ-UZKVSjXNdCEDjly62VjClEsJNtYDgy80T2-/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwMooDfzFMui0gECYgfk5CdSzEjsSkMaN1S6zBA8eOLFiWPQJjDvn2aWKd-NulcxVQ5/exec";
 
 // ─── STATE ──────────────────────────────────────────────────
 let currentPage   = "dashboard";
@@ -38,7 +38,7 @@ function navigateTo(page) {
   document.querySelectorAll(".page").forEach(p =>
     p.classList.toggle("active", p.id === "page-" + page));
 
-  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi", dokumen: "Dokumen" };
+  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi", dokumen: "Dokumen", qr: "Absen via QR" };
   document.getElementById("topbarTitle").textContent = titles[page] || page;
 
   if (page === "dashboard") loadDashboard();
@@ -46,6 +46,7 @@ function navigateTo(page) {
   if (page === "anggota")   loadAnggota();
   if (page === "rekap")     initRekap();
   if (page === "dokumen")   loadDokumen();
+  if (page === "qr")        loadDaftarSesiQR();
   closeSidebar();
 }
 
@@ -965,6 +966,153 @@ function konfirmasiHapusDokumen(id, nama) {
       loadDokumen();
     } catch (err) {
       alert("❌ Gagal menghapus: " + err.message);
+    }
+  };
+}
+
+// ═══ ABSEN VIA QR ═════════════════════════════════════════
+
+let sesiQRTerakhir = null;
+
+async function buatSesiQR() {
+  const tanggal  = document.getElementById("qrTanggal").value;
+  const kategori = document.getElementById("qrKategori").value;
+  const tempat   = document.getElementById("qrTempat").value;
+
+  if (!tanggal || !kategori || !tempat) {
+    showAlert("qrAlert", "error", "Tanggal, kategori, dan tempat wajib diisi.");
+    return;
+  }
+
+  setLoading("qrSubmitBtn", true);
+  try {
+    const result = await writeAPI("buatSesiQR", { tanggal, kategori, tempat });
+    const kode   = result.kode;
+
+    sesiQRTerakhir = { kode, tanggal, kategori, tempat };
+    tampilkanQR(kode, tanggal, kategori, tempat);
+
+    showAlert("qrAlert", "success", "✅ Sesi QR berhasil dibuat!");
+    loadDaftarSesiQR();
+  } catch (err) {
+    showAlert("qrAlert", "error", "❌ Gagal: " + err.message);
+  } finally {
+    setLoading("qrSubmitBtn", false);
+  }
+}
+
+function tampilkanQR(kode, tanggal, kategori, tempat) {
+  document.getElementById("qrPlaceholder").classList.add("hidden");
+  document.getElementById("qrResult").classList.remove("hidden");
+
+  const box = document.getElementById("qrCodeBox");
+  box.innerHTML = ""; // reset
+
+  // URL halaman absen.html dengan parameter kode sesi
+  const baseUrl = window.location.href.replace(/index\.html$/, "").replace(/\/$/, "");
+  const absenUrl = baseUrl + "/absen.html?kode=" + kode;
+
+  new QRCode(box, {
+    text: absenUrl,
+    width: 220,
+    height: 220,
+    colorDark: "#1E2B4A",
+    colorLight: "#ffffff"
+  });
+
+  document.getElementById("qrInfoBox").innerHTML = `
+    <div style="margin-top:14px;font-size:.85rem;color:var(--muted);">
+      <div style="font-weight:700;color:var(--navy);font-size:1rem;margin-bottom:4px;">${kategori}</div>
+      <div>${tempat}</div>
+      <div>${formatTanggal(tanggal)}</div>
+      <div style="margin-top:8px;font-size:.75rem;">Kode: <strong>${kode}</strong></div>
+      <div style="margin-top:6px;font-size:.72rem;word-break:break-all;color:var(--gold-dark);">${absenUrl}</div>
+    </div>
+  `;
+}
+
+function downloadQR() {
+  const canvas = document.querySelector("#qrCodeBox canvas");
+  if (!canvas) { alert("QR belum dibuat."); return; }
+  const link = document.createElement("a");
+  link.download = "QR_Absensi_" + (sesiQRTerakhir?.kode || "kegiatan") + ".png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+function cetakQR() {
+  if (!sesiQRTerakhir) { alert("QR belum dibuat."); return; }
+  const canvas = document.querySelector("#qrCodeBox canvas");
+  const imgData = canvas.toDataURL("image/png");
+
+  const w = window.open("", "_blank");
+  w.document.write(`
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Cetak QR Absensi</title>
+    <style>
+      body { font-family: Inter, sans-serif; text-align:center; padding:40px; color:#1E2B4A; }
+      h1 { font-size:20px; margin-bottom:4px; }
+      h2 { font-size:16px; color:#555; margin-bottom:20px; font-weight:500; }
+      img { width:280px; height:280px; }
+      .info { margin-top:20px; font-size:14px; }
+      .kode { margin-top:10px; font-size:13px; color:#888; }
+    </style></head><body>
+    <h1>STT Panca Kerti</h1>
+    <h2>Absensi: ${sesiQRTerakhir.kategori}</h2>
+    <img src="${imgData}" />
+    <div class="info">
+      <div><strong>${sesiQRTerakhir.tempat}</strong></div>
+      <div>${formatTanggal(sesiQRTerakhir.tanggal)}</div>
+    </div>
+    <div class="kode">Kode Sesi: ${sesiQRTerakhir.kode}</div>
+    <script>window.onload=()=>{window.print();}<\/script>
+    </body></html>
+  `);
+  w.document.close();
+}
+
+async function loadDaftarSesiQR() {
+  const tbody = document.getElementById("qrSesiTableBody");
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="6">Memuat data...</td></tr>`;
+  try {
+    const result = await fetchAPI("getDaftarSesiQR");
+    const rows   = result.data || [];
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Belum ada sesi QR dibuat.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><strong>${r.kode}</strong></td>
+        <td>${formatTanggal(r.tanggal)}</td>
+        <td>${r.kategori}</td>
+        <td>${r.tempat}</td>
+        <td><span class="status-badge ${r.statusSesi === 'Aktif' ? 'hadir' : 'alfa'}">${r.statusSesi}</span></td>
+        <td>
+          ${r.statusSesi === 'Aktif'
+            ? `<button class="btn-hapus" onclick="konfirmasiTutupSesi('${r.kode}')">Tutup</button>`
+            : `<span style="color:var(--muted);font-size:.78rem;">—</span>`}
+        </td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-row">❌ Error: ${err.message}</td></tr>`;
+  }
+}
+
+function konfirmasiTutupSesi(kode) {
+  document.getElementById("modalBody").textContent =
+    `Sesi QR "${kode}" akan ditutup dan tidak bisa dipakai absen lagi.`;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      await writeAPI("tutupSesiQR", { kode });
+      loadDaftarSesiQR();
+    } catch (err) {
+      alert("❌ Gagal menutup sesi: " + err.message);
     }
   };
 }
