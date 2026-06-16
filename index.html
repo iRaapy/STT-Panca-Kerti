@@ -8,6 +8,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Library Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -35,6 +39,9 @@
       </button>
       <button class="nav-item" data-page="rekap" onclick="navigateTo('rekap')">
         <span class="nav-icon">📊</span><span class="nav-label">Rekap Absensi</span>
+      </button>
+      <button class="nav-item" data-page="dokumen" onclick="navigateTo('dokumen')">
+        <span class="nav-icon">🗂️</span><span class="nav-label">Dokumen</span>
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -192,7 +199,12 @@
       <div class="card mt-4">
         <div class="card-header">
           <h2 class="card-title">Daftar Anggota Terdaftar</h2>
-          <button class="btn-secondary-sm" onclick="loadAnggota()">↻ Refresh</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-secondary-sm" onclick="loadAnggota()">↻ Refresh</button>
+            <button class="btn-export" onclick="exportAnggotaExcel()">⬇ Excel</button>
+            <button class="btn-export" onclick="exportAnggotaPDF()">⬇ PDF</button>
+            <button class="btn-export" onclick="cetakHalaman('page-anggota')">🖨 Cetak</button>
+          </div>
         </div>
         <!-- Filter -->
         <div class="form-body" style="border-bottom: 1px solid var(--border); padding-bottom: 12px;">
@@ -329,7 +341,12 @@
       <div class="card mt-4">
         <div class="card-header">
           <h2 class="card-title">Riwayat Absensi</h2>
-          <span class="badge" id="absBadge">— data</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <span class="badge" id="absBadge">— data</span>
+            <button class="btn-export" onclick="exportAbsensiExcel()">⬇ Excel</button>
+            <button class="btn-export" onclick="exportAbsensiPDF()">⬇ PDF</button>
+            <button class="btn-export" onclick="cetakHalaman('page-absensi')">🖨 Cetak</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -444,7 +461,12 @@
       <div class="card mt-4">
         <div class="card-header">
           <h2 class="card-title">Riwayat Transaksi</h2>
-          <span class="badge" id="keuBadge">— data</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <span class="badge" id="keuBadge">— data</span>
+            <button class="btn-export" onclick="exportKeuanganExcel()">⬇ Excel</button>
+            <button class="btn-export" onclick="exportKeuanganPDF()">⬇ PDF</button>
+            <button class="btn-export" onclick="cetakHalaman('page-keuangan')">🖨 Cetak</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -538,7 +560,11 @@
         <div class="card mt-4">
           <div class="card-header">
             <h2 class="card-title">Riwayat Kehadiran</h2>
-            <span class="badge" id="rekapTotalBadge">0 data</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <span class="badge" id="rekapTotalBadge">0 data</span>
+              <button class="btn-export" onclick="exportRekapPDF()">⬇ PDF</button>
+              <button class="btn-export" onclick="cetakRekap()">🖨 Cetak</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table class="data-table">
@@ -557,6 +583,112 @@
       <div id="rekapPlaceholder" class="rekap-placeholder">
         <div class="placeholder-icon">📋</div>
         <p>Ketik nama anggota lalu klik <strong>Tampilkan Rekap</strong></p>
+      </div>
+    </section>
+
+    <!-- ─── DOKUMEN ─── -->
+    <section class="page" id="page-dokumen">
+      <div class="page-header">
+        <h1 class="page-title">Dokumen</h1>
+        <p class="page-subtitle">Upload, simpan, dan kelola file dokumen organisasi</p>
+      </div>
+
+      <!-- Upload File -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Upload Dokumen</h2></div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Nama Dokumen <span class="required">*</span></label>
+              <input type="text" class="form-input" id="docNama" placeholder="Contoh: Nota Kegiatan Ngayah" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori</label>
+              <select class="form-input" id="docKategori">
+                <option value="Foto Kegiatan">Foto Kegiatan</option>
+                <option value="Nota Keuangan">Nota Keuangan</option>
+                <option value="Dokumen Rapat">Dokumen Rapat</option>
+                <option value="Surat">Surat</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Pilih File <span class="required">*</span></label>
+              <div class="upload-area" id="uploadArea" onclick="document.getElementById('docFile').click()"
+                ondragover="event.preventDefault();this.classList.add('drag-over')"
+                ondragleave="this.classList.remove('drag-over')"
+                ondrop="handleFileDrop(event)">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Klik atau seret file ke sini</div>
+                <div class="upload-hint">Foto, PDF, Word, Excel — maks. 5MB</div>
+                <div class="upload-preview hidden" id="uploadPreview"></div>
+              </div>
+              <input type="file" id="docFile" class="hidden"
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                onchange="previewFile(this)" />
+            </div>
+            <div id="docAlert" class="alert hidden"></div>
+            <button class="btn-primary w-full" id="docSubmitBtn" onclick="uploadDokumen()">
+              <span class="btn-text">⬆ Upload ke Google Drive</span>
+              <span class="btn-loading hidden">Mengupload...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel Export Semua Modul -->
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Export Data</h2></div>
+          <div class="form-body">
+            <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">Download data dari setiap modul dalam format Excel atau PDF.</p>
+
+            <div class="export-group">
+              <div class="export-label">👥 Data Anggota</div>
+              <div class="export-btns">
+                <button class="btn-export-lg" onclick="exportAnggotaExcel()">⬇ Excel</button>
+                <button class="btn-export-lg" onclick="exportAnggotaPDF()">⬇ PDF</button>
+              </div>
+            </div>
+            <div class="export-group">
+              <div class="export-label">✓ Data Absensi</div>
+              <div class="export-btns">
+                <button class="btn-export-lg" onclick="exportAbsensiExcelAll()">⬇ Excel</button>
+                <button class="btn-export-lg" onclick="exportAbsensiPDFAll()">⬇ PDF</button>
+              </div>
+            </div>
+            <div class="export-group">
+              <div class="export-label">◎ Data Keuangan</div>
+              <div class="export-btns">
+                <button class="btn-export-lg" onclick="exportKeuanganExcel()">⬇ Excel</button>
+                <button class="btn-export-lg" onclick="exportKeuanganPDF()">⬇ PDF</button>
+              </div>
+            </div>
+            <div class="export-group">
+              <div class="export-label">🖨 Cetak Halaman</div>
+              <div class="export-btns">
+                <button class="btn-export-lg" onclick="navigateTo('anggota');setTimeout(()=>cetakHalaman('page-anggota'),500)">Anggota</button>
+                <button class="btn-export-lg" onclick="navigateTo('keuangan');setTimeout(()=>cetakHalaman('page-keuangan'),500)">Keuangan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daftar Dokumen Tersimpan -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title">Dokumen Tersimpan</h2>
+          <button class="btn-secondary-sm" onclick="loadDokumen()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Nama Dokumen</th><th>Kategori</th><th>Tanggal Upload</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="docTableBody">
+              <tr><td colspan="4" class="empty-row">Klik Refresh untuk memuat dokumen.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 

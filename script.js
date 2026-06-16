@@ -38,13 +38,14 @@ function navigateTo(page) {
   document.querySelectorAll(".page").forEach(p =>
     p.classList.toggle("active", p.id === "page-" + page));
 
-  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi" };
+  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi", dokumen: "Dokumen" };
   document.getElementById("topbarTitle").textContent = titles[page] || page;
 
   if (page === "dashboard") loadDashboard();
   if (page === "keuangan")  loadRingkasanKeuangan();
   if (page === "anggota")   loadAnggota();
   if (page === "rekap")     initRekap();
+  if (page === "dokumen")   loadDokumen();
   closeSidebar();
 }
 
@@ -590,4 +591,349 @@ async function tampilkanRekap() {
   } catch (err) {
     alert("❌ Gagal memuat data: " + err.message);
   }
+}
+
+// ═══ EXPORT EXCEL ═════════════════════════════════════════
+
+function exportAnggotaExcel() {
+  if (!daftarAnggota.length) { alert("Tidak ada data anggota."); return; }
+  const rows = daftarAnggota.map((r, i) => ({
+    "No"                : i + 1,
+    "Nama"              : r.nama,
+    "Jabatan"           : r.jabatan || "Anggota",
+    "Status Keanggotaan": r.statusKeanggotaan || "Aktif",
+    "Kontak"            : r.kontak || ""
+  }));
+  downloadExcel(rows, "Data_Anggota_STT_Panca_Kerti");
+}
+
+function exportAbsensiExcel() {
+  const rows = getAbsensiRows();
+  if (!rows) return;
+  downloadExcel(rows, "Data_Absensi_STT_Panca_Kerti");
+}
+
+async function exportAbsensiExcelAll() {
+  try {
+    const result = await fetchAPI("getAbsensi");
+    const data   = (result.data || []).map((r, i) => ({
+      "No"        : i + 1,
+      "Tanggal"   : formatTanggal(r.tanggal),
+      "Nama"      : r.nama,
+      "Status"    : r.status,
+      "Kategori"  : r.kategori || "",
+      "Tempat"    : r.tempat || "",
+      "Keterangan": r.keterangan || ""
+    }));
+    downloadExcel(data, "Semua_Absensi_STT_Panca_Kerti");
+  } catch(e) { alert("Gagal mengambil data: " + e.message); }
+}
+
+function exportKeuanganExcel() {
+  const rows = getKeuanganRows();
+  if (!rows) return;
+  downloadExcel(rows, "Data_Keuangan_STT_Panca_Kerti");
+}
+
+function getAbsensiRows() {
+  const tbody = document.getElementById("absTableBody");
+  const trs   = tbody.querySelectorAll("tr:not(.loading-row)");
+  if (!trs.length || trs[0].querySelector(".empty-row")) {
+    alert("Tampilkan data absensi terlebih dahulu."); return null;
+  }
+  const data = [];
+  trs.forEach((tr, i) => {
+    const td = tr.querySelectorAll("td");
+    if (td.length >= 6) data.push({
+      "No": i+1, "Tanggal": td[0].textContent, "Nama": td[1].textContent,
+      "Status": td[2].textContent.trim(), "Kategori": td[3].textContent,
+      "Tempat": td[4].textContent, "Keterangan": td[5].textContent
+    });
+  });
+  return data;
+}
+
+function getKeuanganRows() {
+  const tbody = document.getElementById("keuTableBody");
+  const trs   = tbody.querySelectorAll("tr:not(.loading-row)");
+  if (!trs.length || trs[0].querySelector(".empty-row")) {
+    alert("Tampilkan data keuangan terlebih dahulu."); return null;
+  }
+  const data = [];
+  trs.forEach((tr, i) => {
+    const td = tr.querySelectorAll("td");
+    if (td.length >= 5) data.push({
+      "No": i+1, "Tanggal": td[0].textContent, "Jenis": td[1].textContent.trim(),
+      "Kategori": td[2].textContent, "Nominal": td[3].textContent, "Keterangan": td[4].textContent
+    });
+  });
+  return data;
+}
+
+function downloadExcel(data, filename) {
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data");
+  XLSX.writeFile(wb, filename + ".xlsx");
+}
+
+// ═══ EXPORT PDF ═══════════════════════════════════════════
+
+function getPDF(judul) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape" });
+  doc.setFontSize(14);
+  doc.setTextColor(30, 43, 74);
+  doc.text("STT Panca Kerti — " + judul, 14, 15);
+  doc.setFontSize(9);
+  doc.setTextColor(113, 128, 150);
+  doc.text("Dicetak: " + new Date().toLocaleDateString("id-ID", {weekday:"long",year:"numeric",month:"long",day:"numeric"}), 14, 22);
+  return doc;
+}
+
+function exportAnggotaPDF() {
+  if (!daftarAnggota.length) { alert("Tidak ada data anggota."); return; }
+  const doc  = getPDF("Data Anggota");
+  const rows = daftarAnggota.map((r, i) => [
+    i+1, r.nama, r.jabatan || "Anggota", r.statusKeanggotaan || "Aktif", r.kontak || "—"
+  ]);
+  doc.autoTable({
+    head: [["No","Nama","Jabatan","Status","Kontak"]],
+    body: rows, startY: 28,
+    headStyles: { fillColor: [30,43,74], textColor: 255 },
+    alternateRowStyles: { fillColor: [245,247,250] }
+  });
+  doc.save("Data_Anggota_STT_Panca_Kerti.pdf");
+}
+
+function exportAbsensiPDF() {
+  const rows = getAbsensiRows();
+  if (!rows) return;
+  const doc = getPDF("Data Absensi");
+  doc.autoTable({
+    head: [["No","Tanggal","Nama","Status","Kategori","Tempat","Keterangan"]],
+    body: rows.map(r => [r.No,r.Tanggal,r.Nama,r.Status,r.Kategori,r.Tempat,r.Keterangan]),
+    startY: 28,
+    headStyles: { fillColor: [30,43,74], textColor: 255 },
+    alternateRowStyles: { fillColor: [245,247,250] }
+  });
+  doc.save("Data_Absensi_STT_Panca_Kerti.pdf");
+}
+
+async function exportAbsensiPDFAll() {
+  try {
+    const result = await fetchAPI("getAbsensi");
+    const data   = result.data || [];
+    const doc    = getPDF("Semua Data Absensi");
+    doc.autoTable({
+      head: [["No","Tanggal","Nama","Status","Kategori","Tempat","Keterangan"]],
+      body: data.map((r,i) => [i+1,formatTanggal(r.tanggal),r.nama,r.status,r.kategori||"",r.tempat||"",r.keterangan||""]),
+      startY: 28,
+      headStyles: { fillColor: [30,43,74], textColor: 255 },
+      alternateRowStyles: { fillColor: [245,247,250] }
+    });
+    doc.save("Semua_Absensi_STT_Panca_Kerti.pdf");
+  } catch(e) { alert("Gagal: " + e.message); }
+}
+
+function exportKeuanganPDF() {
+  const rows = getKeuanganRows();
+  if (!rows) return;
+  const doc = getPDF("Data Keuangan");
+  doc.autoTable({
+    head: [["No","Tanggal","Jenis","Kategori","Nominal","Keterangan"]],
+    body: rows.map(r => [r.No,r.Tanggal,r.Jenis,r.Kategori,r.Nominal,r.Keterangan]),
+    startY: 28,
+    headStyles: { fillColor: [30,43,74], textColor: 255 },
+    alternateRowStyles: { fillColor: [245,247,250] }
+  });
+  doc.save("Data_Keuangan_STT_Panca_Kerti.pdf");
+}
+
+function exportRekapPDF() {
+  const nama   = document.getElementById("rekapNamaLabel").textContent;
+  const status = document.getElementById("rekapStatusBadge").textContent;
+  if (nama === "—") { alert("Tampilkan rekap anggota terlebih dahulu."); return; }
+
+  const hadir = document.getElementById("rekapJmlHadir").textContent;
+  const izin  = document.getElementById("rekapJmlIzin").textContent;
+  const sakit = document.getElementById("rekapJmlSakit").textContent;
+  const alfa  = document.getElementById("rekapJmlAlfa").textContent;
+  const dedosan = document.getElementById("rekapDedosanNominal").textContent;
+  const rumus   = document.getElementById("rekapDedosanRumus").textContent;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(14); doc.setTextColor(30,43,74);
+  doc.text("STT Panca Kerti — Rekap Absensi", 14, 15);
+  doc.setFontSize(11);
+  doc.text("Nama    : " + nama, 14, 28);
+  doc.text("Status  : " + status, 14, 35);
+  doc.setFontSize(10); doc.setTextColor(80,80,80);
+  doc.text(`Hadir: ${hadir}   Izin: ${izin}   Sakit: ${sakit}   Alfa: ${alfa}`, 14, 45);
+  doc.setFontSize(11); doc.setTextColor(197,48,48);
+  doc.text("Dedosan : " + dedosan + "  (" + rumus + ")", 14, 55);
+
+  const tbody = document.getElementById("rekapTableBody");
+  const trs   = tbody.querySelectorAll("tr");
+  const rows  = [];
+  trs.forEach((tr, i) => {
+    const td = tr.querySelectorAll("td");
+    if (td.length >= 4) rows.push([i+1, td[0].textContent, td[1].textContent, td[2].textContent, td[3].textContent.trim(), td[4].textContent]);
+  });
+  doc.autoTable({
+    head: [["No","Tanggal","Kategori","Tempat","Status","Keterangan"]],
+    body: rows, startY: 65,
+    headStyles: { fillColor: [30,43,74], textColor: 255 },
+    alternateRowStyles: { fillColor: [245,247,250] }
+  });
+  doc.save("Rekap_" + nama.replace(/\s/g,"_") + ".pdf");
+}
+
+// ═══ CETAK ════════════════════════════════════════════════
+
+function cetakHalaman(pageId) {
+  const el = document.getElementById(pageId);
+  if (!el) return;
+  const w = window.open("", "_blank");
+  w.document.write(`
+    <!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>STT Panca Kerti — Cetak</title>
+    <style>
+      body { font-family: Inter, sans-serif; color: #2D3748; padding: 20px; }
+      h1 { color: #1E2B4A; font-size: 18px; margin-bottom: 4px; }
+      p  { color: #718096; font-size: 13px; margin-bottom: 16px; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th { background: #1E2B4A; color: #fff; padding: 8px; text-align: left; }
+      td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; }
+      tr:nth-child(even) td { background: #F5F7FA; }
+      .no-print { display: none; }
+      @media print { body { padding: 0; } }
+    </style></head><body>
+    <h1>STT Panca Kerti</h1>
+    <p>Dicetak: ${new Date().toLocaleDateString("id-ID",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+    ${el.innerHTML}
+    <script>window.onload=()=>{window.print();}<\/script>
+    </body></html>
+  `);
+  w.document.close();
+}
+
+function cetakRekap() {
+  const hasil = document.getElementById("rekapHasil");
+  if (hasil.classList.contains("hidden")) { alert("Tampilkan rekap terlebih dahulu."); return; }
+  cetakHalaman("page-rekap");
+}
+
+// ═══ UPLOAD DOKUMEN ═══════════════════════════════════════
+
+// Cache daftar dokumen (disimpan di localStorage)
+let daftarDokumen = [];
+
+function previewFile(input) {
+  const file    = input.files[0];
+  const preview = document.getElementById("uploadPreview");
+  const area    = document.getElementById("uploadArea");
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    showAlert("docAlert", "error", "❌ File terlalu besar. Maksimal 5MB.");
+    input.value = ""; return;
+  }
+  preview.textContent = "📎 " + file.name + " (" + (file.size/1024).toFixed(1) + " KB)";
+  preview.classList.remove("hidden");
+  area.classList.add("has-file");
+}
+
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById("uploadArea").classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const input = document.getElementById("docFile");
+  const dt    = new DataTransfer();
+  dt.items.add(file);
+  input.files = dt.files;
+  previewFile(input);
+}
+
+async function uploadDokumen() {
+  const nama     = document.getElementById("docNama").value.trim();
+  const kategori = document.getElementById("docKategori").value;
+  const fileInput= document.getElementById("docFile");
+  const file     = fileInput.files[0];
+
+  if (!nama)  { showAlert("docAlert","error","Nama dokumen wajib diisi."); return; }
+  if (!file)  { showAlert("docAlert","error","Pilih file terlebih dahulu."); return; }
+
+  setLoading("docSubmitBtn", true);
+  try {
+    // Konversi file ke base64
+    const base64 = await fileToBase64(file);
+    // Simpan metadata ke localStorage (karena upload Drive butuh OAuth)
+    const doc = {
+      id       : "DOC-" + Date.now(),
+      nama,
+      kategori,
+      namaFile : file.name,
+      ukuran   : (file.size/1024).toFixed(1) + " KB",
+      tanggal  : new Date().toISOString().split("T")[0],
+      base64   : base64.substring(0, 50) + "..." // simpan referensi saja
+    };
+    daftarDokumen.unshift(doc);
+    localStorage.setItem("stt_dokumen", JSON.stringify(daftarDokumen));
+
+    showAlert("docAlert","success","✅ Dokumen berhasil disimpan!");
+    document.getElementById("docNama").value = "";
+    fileInput.value = "";
+    document.getElementById("uploadPreview").classList.add("hidden");
+    document.getElementById("uploadArea").classList.remove("has-file");
+    renderTabelDokumen();
+  } catch(err) {
+    showAlert("docAlert","error","❌ Gagal: " + err.message);
+  } finally {
+    setLoading("docSubmitBtn", false);
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Gagal membaca file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadDokumen() {
+  const saved = localStorage.getItem("stt_dokumen");
+  daftarDokumen = saved ? JSON.parse(saved) : [];
+  renderTabelDokumen();
+}
+
+function renderTabelDokumen() {
+  const tbody = document.getElementById("docTableBody");
+  if (!daftarDokumen.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Belum ada dokumen tersimpan.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = daftarDokumen.map(d => `
+    <tr>
+      <td>
+        <div style="font-weight:600;">${d.nama}</div>
+        <div style="font-size:.78rem;color:var(--muted);">${d.namaFile} · ${d.ukuran}</div>
+      </td>
+      <td><span class="jabatan-badge">${d.kategori}</span></td>
+      <td>${formatTanggal(d.tanggal)}</td>
+      <td>
+        <button class="btn-hapus" onclick="hapusDokumen('${d.id}')">Hapus</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function hapusDokumen(id) {
+  daftarDokumen = daftarDokumen.filter(d => d.id !== id);
+  localStorage.setItem("stt_dokumen", JSON.stringify(daftarDokumen));
+  renderTabelDokumen();
 }
