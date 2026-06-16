@@ -595,16 +595,20 @@ async function tampilkanRekap() {
 
 // ═══ EXPORT EXCEL ═════════════════════════════════════════
 
-function exportAnggotaExcel() {
-  if (!daftarAnggota.length) { alert("Tidak ada data anggota."); return; }
-  const rows = daftarAnggota.map((r, i) => ({
-    "No"                : i + 1,
-    "Nama"              : r.nama,
-    "Jabatan"           : r.jabatan || "Anggota",
-    "Status Keanggotaan": r.statusKeanggotaan || "Aktif",
-    "Kontak"            : r.kontak || ""
-  }));
-  downloadExcel(rows, "Data_Anggota_STT_Panca_Kerti");
+async function exportAnggotaExcel() {
+  try {
+    const result = await fetchAPI("getAnggota");
+    const data   = result.data || [];
+    if (!data.length) { alert("Tidak ada data anggota."); return; }
+    const rows = data.map((r, i) => ({
+      "No"                : i + 1,
+      "Nama"              : r.nama,
+      "Jabatan"           : r.jabatan || "Anggota",
+      "Status Keanggotaan": r.statusKeanggotaan || "Aktif",
+      "Kontak"            : r.kontak || ""
+    }));
+    downloadExcel(rows, "Data_Anggota_STT_Panca_Kerti");
+  } catch (e) { alert("Gagal mengambil data: " + e.message); }
 }
 
 function exportAbsensiExcel() {
@@ -691,19 +695,23 @@ function getPDF(judul) {
   return doc;
 }
 
-function exportAnggotaPDF() {
-  if (!daftarAnggota.length) { alert("Tidak ada data anggota."); return; }
-  const doc  = getPDF("Data Anggota");
-  const rows = daftarAnggota.map((r, i) => [
-    i+1, r.nama, r.jabatan || "Anggota", r.statusKeanggotaan || "Aktif", r.kontak || "—"
-  ]);
-  doc.autoTable({
-    head: [["No","Nama","Jabatan","Status","Kontak"]],
-    body: rows, startY: 28,
-    headStyles: { fillColor: [30,43,74], textColor: 255 },
-    alternateRowStyles: { fillColor: [245,247,250] }
-  });
-  doc.save("Data_Anggota_STT_Panca_Kerti.pdf");
+async function exportAnggotaPDF() {
+  try {
+    const result = await fetchAPI("getAnggota");
+    const data   = result.data || [];
+    if (!data.length) { alert("Tidak ada data anggota."); return; }
+    const doc  = getPDF("Data Anggota");
+    const rows = data.map((r, i) => [
+      i+1, r.nama, r.jabatan || "Anggota", r.statusKeanggotaan || "Aktif", r.kontak || "—"
+    ]);
+    doc.autoTable({
+      head: [["No","Nama","Jabatan","Status","Kontak"]],
+      body: rows, startY: 28,
+      headStyles: { fillColor: [30,43,74], textColor: 255 },
+      alternateRowStyles: { fillColor: [245,247,250] }
+    });
+    doc.save("Data_Anggota_STT_Panca_Kerti.pdf");
+  } catch (e) { alert("Gagal mengambil data: " + e.message); }
 }
 
 function exportAbsensiPDF() {
