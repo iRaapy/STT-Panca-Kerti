@@ -837,3 +837,88 @@ select.form-input { cursor: pointer; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ─── ANGGOTA ─────────────────────────────────────────────── */
+.nomor-urut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.anggota-nama {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.jabatan-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 600;
+  background: rgba(30,43,74,.08);
+  color: var(--navy);
+}
+
+.jabatan-badge.ketua      { background: rgba(201,168,76,.15); color: #7B5E00; }
+.jabatan-badge.pembina    { background: rgba(30,43,74,.15); color: var(--navy); }
+.jabatan-badge.sekretaris { background: rgba(47,133,90,.1); color: var(--green); }
+.jabatan-badge.bendahara  { background: rgba(197,48,48,.1); color: var(--red); }
+
+/* Info box */
+.info-box {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.info-icon { font-size: 1.4rem; flex-shrink: 0; line-height: 1; }
+
+.info-text {
+  font-size: .83rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.info-text strong { display: block; margin-bottom: 3px; color: var(--navy); }
+.info-text p      { color: var(--muted); margin: 0; }
+
+/* Hint di bawah input */
+.form-hint {
+  display: block;
+  font-size: .75rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Tombol refresh kecil */
+.btn-secondary-sm {
+  padding: 6px 14px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-secondary-sm:hover { border-color: var(--navy); color: var(--navy); }
+
+/* Stats grid 5 kolom di dashboard */
+.stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
