@@ -1,5 +1,5 @@
 // ─── KONFIGURASI ────────────────────────────────────────────
-const API_URL = "https://script.google.com/macros/s/AKfycbyji9JjGVAjbrUVFe0UR9NxkBwZCnKUHjpCI2CIy9FEciO28_euMEU8ZMlDuE-_O2_D/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw-s2JFFIHy5XC-suoIA7E9eGLNoHrOZ294WX3a44zIy_GrjO4khGQ6tt9MeeyQoJWo/exec";
 
 // ─── STATE ──────────────────────────────────────────────────
 let currentPage   = "dashboard";
@@ -826,9 +826,8 @@ function cetakRekap() {
   cetakHalaman("page-rekap");
 }
 
-// ═══ UPLOAD DOKUMEN ═══════════════════════════════════════
+// ═══ UPLOAD DOKUMEN (Google Drive) ═══════════════════════
 
-// Cache daftar dokumen (disimpan di localStorage)
 let daftarDokumen = [];
 
 function previewFile(input) {
@@ -868,27 +867,29 @@ async function uploadDokumen() {
 
   setLoading("docSubmitBtn", true);
   try {
-    // Konversi file ke base64
     const base64 = await fileToBase64(file);
-    // Simpan metadata ke localStorage (karena upload Drive butuh OAuth)
-    const doc = {
-      id       : "DOC-" + Date.now(),
-      nama,
-      kategori,
-      namaFile : file.name,
-      ukuran   : (file.size/1024).toFixed(1) + " KB",
-      tanggal  : new Date().toISOString().split("T")[0],
-      base64   : base64.substring(0, 50) + "..." // simpan referensi saja
-    };
-    daftarDokumen.unshift(doc);
-    localStorage.setItem("stt_dokumen", JSON.stringify(daftarDokumen));
 
-    showAlert("docAlert","success","✅ Dokumen berhasil disimpan!");
+    // Kirim ke Apps Script via POST agar file tersimpan ke Google Drive
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action  : "uploadDokumen",
+        nama    : nama,
+        kategori: kategori,
+        namaFile: file.name,
+        base64  : base64
+      })
+    });
+    const result = await response.json();
+    if (result.status !== "success") throw new Error(result.message || "Upload gagal.");
+
+    showAlert("docAlert","success","✅ Dokumen berhasil diupload ke Google Drive!");
     document.getElementById("docNama").value = "";
     fileInput.value = "";
     document.getElementById("uploadPreview").classList.add("hidden");
     document.getElementById("uploadArea").classList.remove("has-file");
-    renderTabelDokumen();
+    loadDokumen();
   } catch(err) {
     showAlert("docAlert","error","❌ Gagal: " + err.message);
   } finally {
@@ -905,10 +906,16 @@ function fileToBase64(file) {
   });
 }
 
-function loadDokumen() {
-  const saved = localStorage.getItem("stt_dokumen");
-  daftarDokumen = saved ? JSON.parse(saved) : [];
-  renderTabelDokumen();
+async function loadDokumen() {
+  const tbody = document.getElementById("docTableBody");
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="4">Memuat data...</td></tr>`;
+  try {
+    const result  = await fetchAPI("getDokumen");
+    daftarDokumen = result.data || [];
+    renderTabelDokumen();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-row">❌ Error: ${err.message}</td></tr>`;
+  }
 }
 
 function renderTabelDokumen() {
@@ -917,23 +924,39 @@ function renderTabelDokumen() {
     tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Belum ada dokumen tersimpan.</td></tr>`;
     return;
   }
-  tbody.innerHTML = daftarDokumen.map(d => `
+  tbody.innerHTML = daftarDokumen.map(d => {
+    const ukuranKB = d.ukuran ? (d.ukuran/1024).toFixed(1) + " KB" : "—";
+    return `
     <tr>
       <td>
-        <div style="font-weight:600;">${d.nama}</div>
-        <div style="font-size:.78rem;color:var(--muted);">${d.namaFile} · ${d.ukuran}</div>
+        <div style="font-weight:600;">
+          <a href="${d.url}" target="_blank" style="color:var(--navy);text-decoration:none;">
+            📄 ${d.nama}
+          </a>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);">${d.namaFile} · ${ukuranKB}</div>
       </td>
       <td><span class="jabatan-badge">${d.kategori}</span></td>
-      <td>${formatTanggal(d.tanggal)}</td>
+      <td>${formatTanggal((d.timestamp || "").split("T")[0])}</td>
       <td>
-        <button class="btn-hapus" onclick="hapusDokumen('${d.id}')">Hapus</button>
+        <a href="${d.url}" target="_blank" class="btn-export" style="text-decoration:none;display:inline-block;">Buka</a>
+        <button class="btn-hapus" onclick="konfirmasiHapusDokumen('${d.id}', '${d.nama}')">Hapus</button>
       </td>
     </tr>
-  `).join("");
+  `}).join("");
 }
 
-function hapusDokumen(id) {
-  daftarDokumen = daftarDokumen.filter(d => d.id !== id);
-  localStorage.setItem("stt_dokumen", JSON.stringify(daftarDokumen));
-  renderTabelDokumen();
+function konfirmasiHapusDokumen(id, nama) {
+  document.getElementById("modalBody").textContent =
+    `Dokumen "${nama}" akan dihapus permanen dari Google Drive.`;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      await writeAPI("hapusDokumen", { id });
+      loadDokumen();
+    } catch (err) {
+      alert("❌ Gagal menghapus: " + err.message);
+    }
+  };
 }
