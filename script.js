@@ -1,5 +1,5 @@
 // ─── KONFIGURASI ────────────────────────────────────────────
-const API_URL = "https://script.google.com/macros/s/AKfycbzS1q6ZVdWg7ggb5_glbJV-SJriFTWEiej247JYjp6SnyOtg8aeJ18eSWHmE6PVON15/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxMtRRVkAhz3R6g4TDgFA5Qn_U1TwyQ-UZKVSjXNdCEDjly62VjClEsJNtYDgy80T2-/exec";
 
 // ─── STATE ──────────────────────────────────────────────────
 let currentPage   = "dashboard";
