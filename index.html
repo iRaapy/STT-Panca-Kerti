@@ -33,6 +33,9 @@
       <button class="nav-item" data-page="keuangan" onclick="navigateTo('keuangan')">
         <span class="nav-icon">◎</span><span class="nav-label">Keuangan</span>
       </button>
+      <button class="nav-item" data-page="rekap" onclick="navigateTo('rekap')">
+        <span class="nav-icon">📊</span><span class="nav-label">Rekap Absensi</span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="connection-status" id="connectionStatus">
@@ -453,6 +456,107 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <!-- ─── REKAP ABSENSI ─── -->
+    <section class="page" id="page-rekap">
+      <div class="page-header">
+        <h1 class="page-title">Rekap Absensi</h1>
+        <p class="page-subtitle">Lihat rekap kehadiran dan dedosan per anggota</p>
+      </div>
+
+      <!-- Pencarian -->
+      <div class="card">
+        <div class="card-header"><h2 class="card-title">Cari Anggota</h2></div>
+        <div class="form-body">
+          <div class="form-group">
+            <label class="form-label">Nama Anggota</label>
+            <input type="text" class="form-input" id="rekapNama"
+              placeholder="Ketik nama anggota..." list="listAnggotaRekap"
+              autocomplete="off" oninput="onRekapNamaInput()" />
+            <datalist id="listAnggotaRekap"></datalist>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div class="form-group" style="flex:1; min-width:140px;">
+              <label class="form-label">Dari Tanggal</label>
+              <input type="date" class="form-input" id="rekapDari" />
+            </div>
+            <div class="form-group" style="flex:1; min-width:140px;">
+              <label class="form-label">Sampai Tanggal</label>
+              <input type="date" class="form-input" id="rekapSampai" />
+            </div>
+          </div>
+          <button class="btn-primary w-full" onclick="tampilkanRekap()">🔍 Tampilkan Rekap</button>
+        </div>
+      </div>
+
+      <!-- Hasil Rekap -->
+      <div id="rekapHasil" class="hidden">
+
+        <!-- Kartu Info Anggota -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title" id="rekapNamaLabel">—</h2>
+            <span class="badge" id="rekapStatusBadge">—</span>
+          </div>
+          <div class="rekap-grid">
+            <div class="rekap-stat-card hadir">
+              <div class="rekap-stat-angka" id="rekapJmlHadir">0</div>
+              <div class="rekap-stat-label">✅ Hadir</div>
+            </div>
+            <div class="rekap-stat-card izin">
+              <div class="rekap-stat-angka" id="rekapJmlIzin">0</div>
+              <div class="rekap-stat-label">📋 Izin</div>
+            </div>
+            <div class="rekap-stat-card sakit">
+              <div class="rekap-stat-angka" id="rekapJmlSakit">0</div>
+              <div class="rekap-stat-label">🏥 Sakit</div>
+            </div>
+            <div class="rekap-stat-card alfa">
+              <div class="rekap-stat-angka" id="rekapJmlAlfa">0</div>
+              <div class="rekap-stat-label">❌ Alfa</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kartu Dedosan -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title">💰 Dedosan</h2>
+          </div>
+          <div class="form-body">
+            <div id="rekapDedosanBox" class="dedosan-box">
+              <div class="dedosan-rumus" id="rekapDedosanRumus">—</div>
+              <div class="dedosan-nominal" id="rekapDedosanNominal">Rp 0</div>
+            </div>
+            <div id="rekapDedosanKet" class="dedosan-ket"></div>
+          </div>
+        </div>
+
+        <!-- Tabel Riwayat -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title">Riwayat Kehadiran</h2>
+            <span class="badge" id="rekapTotalBadge">0 data</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Tanggal</th><th>Kategori</th><th>Tempat</th><th>Status</th><th>Keterangan</th></tr>
+              </thead>
+              <tbody id="rekapTableBody">
+                <tr><td colspan="5" class="empty-row">Belum ada data.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <!-- Placeholder sebelum cari -->
+      <div id="rekapPlaceholder" class="rekap-placeholder">
+        <div class="placeholder-icon">📋</div>
+        <p>Ketik nama anggota lalu klik <strong>Tampilkan Rekap</strong></p>
       </div>
     </section>
 

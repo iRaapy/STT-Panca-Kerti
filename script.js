@@ -38,12 +38,13 @@ function navigateTo(page) {
   document.querySelectorAll(".page").forEach(p =>
     p.classList.toggle("active", p.id === "page-" + page));
 
-  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota" };
+  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi" };
   document.getElementById("topbarTitle").textContent = titles[page] || page;
 
   if (page === "dashboard") loadDashboard();
   if (page === "keuangan")  loadRingkasanKeuangan();
   if (page === "anggota")   loadAnggota();
+  if (page === "rekap")     initRekap();
   closeSidebar();
 }
 
@@ -478,3 +479,115 @@ async function eksekusiHapus() {
 document.getElementById("modalBackdrop").addEventListener("click", function(e) {
   if (e.target === this) closeModal();
 });
+
+// ═══ REKAP ABSENSI ════════════════════════════════════════
+function initRekap() {
+  // Isi datalist nama anggota
+  const datalist = document.getElementById("listAnggotaRekap");
+  if (datalist && daftarAnggota.length > 0) {
+    datalist.innerHTML = daftarAnggota.map(a =>
+      `<option value="${a.nama}">`
+    ).join("");
+  }
+  // Reset tampilan
+  document.getElementById("rekapHasil").classList.add("hidden");
+  document.getElementById("rekapPlaceholder").classList.remove("hidden");
+}
+
+function onRekapNamaInput() {
+  // Jika nama sudah cocok dengan daftar, langsung tampilkan
+  const nama = document.getElementById("rekapNama").value.trim();
+  const cocok = daftarAnggota.find(a => a.nama.toLowerCase() === nama.toLowerCase());
+  if (cocok) tampilkanRekap();
+}
+
+async function tampilkanRekap() {
+  const nama    = document.getElementById("rekapNama").value.trim();
+  const dari    = document.getElementById("rekapDari").value;
+  const sampai  = document.getElementById("rekapSampai").value;
+
+  if (!nama) { alert("Masukkan nama anggota terlebih dahulu."); return; }
+
+  // Cari data anggota untuk tahu statusnya
+  const infoAnggota = daftarAnggota.find(a =>
+    a.nama.toLowerCase() === nama.toLowerCase()
+  );
+
+  try {
+    const params = { nama };
+    const result = await fetchAPI("getAbsensi", params);
+    let rows = result.data || [];
+
+    // Filter tanggal jika diisi
+    if (dari)   rows = rows.filter(r => r.tanggal >= dari);
+    if (sampai) rows = rows.filter(r => r.tanggal <= sampai);
+
+    // Hitung statistik
+    const stat = { Hadir: 0, Izin: 0, Sakit: 0, Alfa: 0 };
+    rows.forEach(r => { if (stat[r.status] !== undefined) stat[r.status]++; });
+
+    const totalHadir      = stat.Hadir;
+    const totalTidakHadir = stat.Alfa;
+    const statusAnggota   = infoAnggota?.statusKeanggotaan || "Aktif";
+
+    // Hitung dedosan berdasarkan status
+    let dedosan = 0, rumus = "", ket = "";
+
+    if (statusAnggota === "Aktif" || statusAnggota === "Pengurus") {
+      dedosan = totalTidakHadir * 5000;
+      rumus   = `${totalTidakHadir} alfa × Rp 5.000`;
+      ket     = "Anggota Aktif: Rp 5.000 per ketidakhadiran (Alfa)";
+    } else if (statusAnggota === "Nonaktif") {
+      dedosan = Math.max(0, 50000 - (totalHadir * 2000));
+      rumus   = `Rp 50.000 − (${totalHadir} hadir × Rp 2.000)`;
+      ket     = "Nonaktif: Rp 50.000 dikurangi Rp 2.000 per kehadiran";
+    } else if (statusAnggota === "Pengampel") {
+      dedosan = Math.max(0, 80000 - (totalHadir * 2000));
+      rumus   = `Rp 80.000 − (${totalHadir} hadir × Rp 2.000)`;
+      ket     = "Pengampel: Rp 80.000 dikurangi Rp 2.000 per kehadiran";
+    }
+
+    // Tampilkan hasil
+    document.getElementById("rekapPlaceholder").classList.add("hidden");
+    document.getElementById("rekapHasil").classList.remove("hidden");
+
+    document.getElementById("rekapNamaLabel").textContent  = nama;
+    document.getElementById("rekapStatusBadge").textContent = statusAnggota;
+    document.getElementById("rekapStatusBadge").className  =
+      "badge status-keanggotaan-badge " + statusAnggota.toLowerCase();
+
+    document.getElementById("rekapJmlHadir").textContent = stat.Hadir;
+    document.getElementById("rekapJmlIzin").textContent  = stat.Izin;
+    document.getElementById("rekapJmlSakit").textContent = stat.Sakit;
+    document.getElementById("rekapJmlAlfa").textContent  = stat.Alfa;
+
+    document.getElementById("rekapDedosanRumus").textContent   = rumus;
+    document.getElementById("rekapDedosanNominal").textContent = formatRupiah(dedosan);
+    document.getElementById("rekapDedosanKet").textContent     = ket;
+
+    // Warna dedosan
+    const nominalEl = document.getElementById("rekapDedosanNominal");
+    nominalEl.className = "dedosan-nominal " + (dedosan > 0 ? "merah" : "hijau");
+
+    document.getElementById("rekapTotalBadge").textContent = rows.length + " data";
+
+    // Render tabel riwayat
+    const tbody = document.getElementById("rekapTableBody");
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Tidak ada data absensi untuk anggota ini.</td></tr>`;
+    } else {
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${formatTanggal(r.tanggal)}</td>
+          <td>${r.kategori || "—"}</td>
+          <td>${r.tempat || "—"}</td>
+          <td><span class="status-badge ${r.status.toLowerCase()}">${r.status}</span></td>
+          <td>${r.keterangan || "—"}</td>
+        </tr>
+      `).join("");
+    }
+
+  } catch (err) {
+    alert("❌ Gagal memuat data: " + err.message);
+  }
+}

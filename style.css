@@ -953,3 +953,74 @@ select.form-input { cursor: pointer; }
   color: #6B46C1;
   border: 1px solid #D6BCFA;
 }
+
+/* ─── REKAP ABSENSI ─────────────────────────────────────── */
+.rekap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 16px;
+}
+@media (max-width: 600px) {
+  .rekap-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.rekap-stat-card {
+  border-radius: 10px;
+  padding: 16px 12px;
+  text-align: center;
+  border: 1.5px solid var(--border);
+}
+.rekap-stat-card.hadir  { background: #F0FFF4; border-color: #9AE6B4; }
+.rekap-stat-card.izin   { background: #EBF8FF; border-color: #90CDF4; }
+.rekap-stat-card.sakit  { background: #FFFBEB; border-color: #F6E05E; }
+.rekap-stat-card.alfa   { background: #FFF5F5; border-color: #FEB2B2; }
+
+.rekap-stat-angka {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1;
+}
+.rekap-stat-label {
+  font-size: .78rem;
+  color: var(--muted);
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* Dedosan box */
+.dedosan-box {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.dedosan-rumus {
+  font-size: .9rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.dedosan-nominal {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+.dedosan-nominal.merah { color: var(--red); }
+.dedosan-nominal.hijau { color: var(--green); }
+.dedosan-ket {
+  font-size: .8rem;
+  color: var(--muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* Placeholder */
+.rekap-placeholder {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.placeholder-icon { font-size: 3rem; margin-bottom: 12px; }
+.rekap-placeholder p { font-size: .95rem; }
