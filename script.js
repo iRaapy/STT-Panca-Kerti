@@ -1104,15 +1104,45 @@ async function loadDaftarSesiQR() {
 
 function konfirmasiTutupSesi(kode) {
   document.getElementById("modalBody").textContent =
-    `Sesi QR "${kode}" akan ditutup dan tidak bisa dipakai absen lagi.`;
+    `Sesi QR "${kode}" akan ditutup dan tidak bisa dipakai absen lagi. Anggota aktif yang belum mengisi absensi pada sesi ini akan otomatis ditandai Alfa.`;
   document.getElementById("modalBackdrop").classList.remove("hidden");
   document.getElementById("modalConfirmBtn").onclick = async () => {
     closeModal();
     try {
-      await writeAPI("tutupSesiQR", { kode });
+      const result = await writeAPI("tutupSesiQR", { kode });
+      alert("✅ " + result.message);
       loadDaftarSesiQR();
     } catch (err) {
       alert("❌ Gagal menutup sesi: " + err.message);
+    }
+  };
+}
+
+// ─── TUTUP ABSENSI MANUAL (auto-Alfa untuk anggota yang tidak absen) ──
+function konfirmasiTutupAbsensiManual() {
+  const tanggal  = document.getElementById("tutupAbsTanggal").value;
+  const kategori = document.getElementById("tutupAbsKategori").value;
+  const tempat   = document.getElementById("tutupAbsTempat").value;
+
+  if (!tanggal || !kategori) {
+    showAlert("tutupAbsAlert", "error", "Tanggal dan kategori wajib diisi.");
+    return;
+  }
+
+  document.getElementById("modalBody").textContent =
+    `Anggota aktif yang belum mengisi absensi pada tanggal ${formatTanggal(tanggal)} untuk kegiatan "${kategori}" akan otomatis ditandai Alfa. Lanjutkan?`;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    setLoading("tutupAbsBtn", true);
+    try {
+      const result = await writeAPI("tutupAbsensiManual", { tanggal, kategori, tempat });
+      showAlert("tutupAbsAlert", "success", "✅ " + result.message);
+      loadAbsensi();
+    } catch (err) {
+      showAlert("tutupAbsAlert", "error", "❌ Gagal: " + err.message);
+    } finally {
+      setLoading("tutupAbsBtn", false);
     }
   };
 }
