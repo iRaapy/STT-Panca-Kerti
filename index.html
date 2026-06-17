@@ -570,6 +570,24 @@
         </div>
       </div>
 
+      <!-- Daftar Tanggal Kegiatan (referensi) -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title">🗓️ Daftar Tanggal Kegiatan</h2>
+          <button class="btn-secondary-sm" onclick="loadDaftarKegiatan()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Tanggal</th><th>Kategori</th><th>Tempat</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alfa</th><th>Total</th></tr>
+            </thead>
+            <tbody id="kegiatanTableBody">
+              <tr><td colspan="8" class="empty-row">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Hasil Rekap -->
       <div id="rekapHasil" class="hidden">
 
@@ -610,6 +628,9 @@
               <div class="dedosan-nominal" id="rekapDedosanNominal">Rp 0</div>
             </div>
             <div id="rekapDedosanKet" class="dedosan-ket"></div>
+            <div id="rekapDedosanBtnWrap" class="hidden" style="margin-top:14px;">
+              <button class="btn-primary w-full" id="rekapBayarBtn" onclick="konfirmasiSudahBayar()">✅ Tandai Sudah Bayar</button>
+            </div>
           </div>
         </div>
 

@@ -483,6 +483,8 @@ document.getElementById("modalBackdrop").addEventListener("click", function(e) {
 });
 
 // ═══ REKAP ABSENSI ════════════════════════════════════════
+let rekapNamaTerakhir = "";
+
 function initRekap() {
   // Isi datalist nama anggota
   const datalist = document.getElementById("listAnggotaRekap");
@@ -494,6 +496,38 @@ function initRekap() {
   // Reset tampilan
   document.getElementById("rekapHasil").classList.add("hidden");
   document.getElementById("rekapPlaceholder").classList.remove("hidden");
+  loadDaftarKegiatan();
+}
+
+// Daftar semua tanggal+kegiatan yang pernah diadakan (referensi)
+async function loadDaftarKegiatan() {
+  const tbody = document.getElementById("kegiatanTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="8">Memuat data...</td></tr>`;
+  try {
+    const result = await fetchAPI("getDaftarKegiatan");
+    const rows   = result.data || [];
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-row">Belum ada kegiatan tercatat.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>${formatTanggal(r.tanggal)}</td>
+        <td>${r.kategori || "—"}</td>
+        <td>${r.tempat || "—"}</td>
+        <td>${r.hadir}</td>
+        <td>${r.izin}</td>
+        <td>${r.sakit}</td>
+        <td>${r.alfa}</td>
+        <td><strong>${r.total}</strong></td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-row">❌ Error: ${err.message}</td></tr>`;
+  }
 }
 
 function onRekapNamaInput() {
@@ -510,6 +544,8 @@ async function tampilkanRekap() {
 
   if (!nama) { alert("Masukkan nama anggota terlebih dahulu."); return; }
 
+  rekapNamaTerakhir = nama;
+
   // Cari data anggota untuk tahu statusnya
   const infoAnggota = daftarAnggota.find(a =>
     a.nama.toLowerCase() === nama.toLowerCase()
@@ -517,19 +553,31 @@ async function tampilkanRekap() {
 
   try {
     const params = { nama };
-    const result = await fetchAPI("getAbsensi", params);
+    const [result, statusBayarResult] = await Promise.all([
+      fetchAPI("getAbsensi", params),
+      fetchAPI("getStatusBayar", { nama })
+    ]);
     let rows = result.data || [];
+    const lunasSampaiTanggal = statusBayarResult.data?.lunasSampaiTanggal || null;
 
     // Filter tanggal jika diisi
     if (dari)   rows = rows.filter(r => r.tanggal >= dari);
     if (sampai) rows = rows.filter(r => r.tanggal <= sampai);
 
-    // Hitung statistik
+    // Hitung statistik (untuk kartu Hadir/Izin/Sakit/Alfa, mengikuti rentang yang dicari)
     const stat = { Hadir: 0, Izin: 0, Sakit: 0, Alfa: 0 };
     rows.forEach(r => { if (stat[r.status] !== undefined) stat[r.status]++; });
 
-    const totalHadir      = stat.Hadir;
-    const totalTidakHadir = stat.Alfa;
+    // Khusus dedosan: kalau anggota sudah pernah bayar, hanya hitung record
+    // SETELAH tanggal lunas terakhir (dedosan sebelumnya dianggap lunas)
+    const rowsDedosan = lunasSampaiTanggal
+      ? rows.filter(r => r.tanggal > lunasSampaiTanggal)
+      : rows;
+    const statDedosan = { Hadir: 0, Alfa: 0 };
+    rowsDedosan.forEach(r => { if (statDedosan[r.status] !== undefined) statDedosan[r.status]++; });
+
+    const totalHadir      = statDedosan.Hadir;
+    const totalTidakHadir = statDedosan.Alfa;
     const statusAnggota   = infoAnggota?.statusKeanggotaan || "Aktif";
 
     // Hitung dedosan berdasarkan status
@@ -547,6 +595,12 @@ async function tampilkanRekap() {
       dedosan = Math.max(0, 80000 - (totalHadir * 2000));
       rumus   = `Rp 80.000 − (${totalHadir} hadir × Rp 2.000)`;
       ket     = "Pengampel: Rp 80.000 dikurangi Rp 2.000 per kehadiran";
+    }
+
+    if (lunasSampaiTanggal) {
+      ket = dedosan > 0
+        ? `✅ Sudah bayar sampai tanggal ${formatTanggal(lunasSampaiTanggal)}. Dedosan di bawah ini dihitung sejak tanggal tersebut. ${ket}`
+        : `✅ Lunas — sudah bayar sampai tanggal ${formatTanggal(lunasSampaiTanggal)}. Belum ada dedosan baru sejak pembayaran terakhir.`;
     }
 
     // Tampilkan hasil
@@ -571,6 +625,9 @@ async function tampilkanRekap() {
     const nominalEl = document.getElementById("rekapDedosanNominal");
     nominalEl.className = "dedosan-nominal " + (dedosan > 0 ? "merah" : "hijau");
 
+    // Tombol "Tandai Sudah Bayar" hanya muncul kalau masih ada dedosan tertunggak
+    document.getElementById("rekapDedosanBtnWrap").classList.toggle("hidden", dedosan <= 0);
+
     document.getElementById("rekapTotalBadge").textContent = rows.length + " data";
 
     // Render tabel riwayat
@@ -592,6 +649,25 @@ async function tampilkanRekap() {
   } catch (err) {
     alert("❌ Gagal memuat data: " + err.message);
   }
+}
+
+// Tandai anggota yang sedang ditampilkan rekapnya sebagai sudah bayar dedosan.
+// Berlaku per anggota: setelah ditandai, semua dedosan sampai hari ini dianggap lunas.
+function konfirmasiSudahBayar() {
+  if (!rekapNamaTerakhir) return;
+  document.getElementById("modalBody").textContent =
+    `Tandai "${rekapNamaTerakhir}" sudah membayar dedosan? Semua dedosan sampai hari ini akan dianggap lunas.`;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      const result = await writeAPI("tandaiSudahBayar", { nama: rekapNamaTerakhir });
+      alert("✅ " + result.message);
+      tampilkanRekap(); // refresh agar status lunas langsung terlihat
+    } catch (err) {
+      alert("❌ Gagal mencatat pembayaran: " + err.message);
+    }
+  };
 }
 
 // ═══ EXPORT EXCEL ═════════════════════════════════════════
