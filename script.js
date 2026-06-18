@@ -38,7 +38,7 @@ function navigateTo(page) {
   document.querySelectorAll(".page").forEach(p =>
     p.classList.toggle("active", p.id === "page-" + page));
 
-  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi", dokumen: "Dokumen", qr: "Absen via QR", event: "Event" };
+  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi", dokumen: "Dokumen", qr: "Absen via QR", event: "Event", wagroup: "Cek Grup WA" };
   document.getElementById("topbarTitle").textContent = titles[page] || page;
 
   if (page === "dashboard") loadDashboard();
@@ -1655,4 +1655,103 @@ async function onScanSuccess(decodedText) {
 
   // Beri jeda 2.5 detik sebelum bisa scan lagi (mencegah scan berulang untuk QR yang sama)
   setTimeout(() => { sedangProsesScan = false; }, 2500);
+}
+
+// ═══ CEK GRUP WA ══════════════════════════════════════════
+
+// Normalisasi nomor HP ke format standar (62xxxxxxxxxx) agar bisa dibandingkan
+// meski format aslinya beda-beda (08xx, +62xx, dengan spasi/strip, dll).
+function normalisasiNomor(nomor) {
+  if (!nomor) return "";
+  let bersih = nomor.toString().replace(/[^\d]/g, ""); // hanya sisakan digit
+  if (!bersih) return "";
+
+  if (bersih.startsWith("0")) {
+    bersih = "62" + bersih.substring(1);
+  } else if (bersih.startsWith("8")) {
+    bersih = "62" + bersih;
+  }
+  // kalau sudah diawali 62, biarkan apa adanya
+  return bersih;
+}
+
+async function bandingkanGrupWA() {
+  const rawInput = document.getElementById("waNomorInput").value.trim();
+  if (!rawInput) { alert("Tempel daftar nomor HP grup WA terlebih dahulu."); return; }
+
+  // Pecah per baris, normalisasi, buang baris kosong, jadikan Set untuk lookup cepat
+  const nomorGrupSet = new Set(
+    rawInput.split("\n")
+      .map(n => normalisasiNomor(n))
+      .filter(n => n.length >= 8) // buang yang terlalu pendek / tidak valid
+  );
+
+  if (nomorGrupSet.size === 0) {
+    alert("Tidak ada nomor valid yang terdeteksi dari teks yang ditempel.");
+    return;
+  }
+
+  try {
+    const result   = await fetchAPI("getAnggota");
+    const anggota  = result.data || [];
+
+    const sudahDiGrup   = [];
+    const belumDiGrup   = [];
+    const tanpaNomor    = [];
+
+    anggota.forEach(a => {
+      const nomorBersih = normalisasiNomor(a.kontak);
+      if (!nomorBersih) {
+        tanpaNomor.push(a);
+      } else if (nomorGrupSet.has(nomorBersih)) {
+        sudahDiGrup.push(a);
+      } else {
+        belumDiGrup.push(a);
+      }
+    });
+
+    document.getElementById("waHasilBox").classList.remove("hidden");
+    document.getElementById("waJmlSudah").textContent      = sudahDiGrup.length;
+    document.getElementById("waJmlBelum").textContent      = belumDiGrup.length;
+    document.getElementById("waJmlTanpaNomor").textContent = tanpaNomor.length;
+
+    const tbodyBelum = document.getElementById("waBelumTableBody");
+    tbodyBelum.innerHTML = belumDiGrup.length
+      ? belumDiGrup.map(a => `
+          <tr>
+            <td><strong>${a.nama}</strong></td>
+            <td>${a.jabatan || "Anggota"}</td>
+            <td>${a.kontak}</td>
+          </tr>`).join("")
+      : `<tr><td colspan="3" class="empty-row">🎉 Semua anggota dengan No. HP sudah ada di grup WA!</td></tr>`;
+
+    const tbodyTanpaNomor = document.getElementById("waTanpaNomorTableBody");
+    tbodyTanpaNomor.innerHTML = tanpaNomor.length
+      ? tanpaNomor.map(a => `
+          <tr>
+            <td><strong>${a.nama}</strong></td>
+            <td>${a.jabatan || "Anggota"}</td>
+          </tr>`).join("")
+      : `<tr><td colspan="2" class="empty-row">Semua anggota sudah punya No. HP tercatat.</td></tr>`;
+
+    // simpan untuk export
+    window._belumDiGrupWA = belumDiGrup;
+
+    document.getElementById("waHasilBox").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    alert("❌ Gagal memuat data anggota: " + err.message);
+  }
+}
+
+function exportBelumWA() {
+  const data = window._belumDiGrupWA || [];
+  if (!data.length) { alert("Tidak ada data untuk diexport. Jalankan perbandingan dulu."); return; }
+
+  const rows = data.map((a, i) => ({
+    "No"     : i + 1,
+    "Nama"   : a.nama,
+    "Jabatan": a.jabatan || "Anggota",
+    "No. HP" : a.kontak
+  }));
+  downloadExcel(rows, "Belum_Gabung_Grup_WA");
 }

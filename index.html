@@ -52,6 +52,9 @@
       <button class="nav-item" data-page="event" onclick="navigateTo('event')">
         <span class="nav-icon">🎪</span><span class="nav-label">Event</span>
       </button>
+      <button class="nav-item" data-page="wagroup" onclick="navigateTo('wagroup')">
+        <span class="nav-icon">💬</span><span class="nav-label">Cek Grup WA</span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="connection-status" id="connectionStatus">
@@ -1009,6 +1012,72 @@
               <tbody id="panitiaTableBody">
                 <tr><td colspan="6" class="empty-row">Belum ada panitia.</td></tr>
               </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── CEK GRUP WA ─── -->
+    <section class="page" id="page-wagroup">
+      <div class="page-header">
+        <h1 class="page-title">Cek Grup WA</h1>
+        <p class="page-subtitle">Bandingkan nomor HP anggota di aplikasi dengan nomor yang sudah ada di grup WhatsApp</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2 class="card-title">Tempel Daftar Nomor Grup WA</h2></div>
+        <div class="form-body">
+          <div class="info-box">
+            <div class="info-icon">💡</div>
+            <div class="info-text">
+              <strong>Cara mendapatkan nomor dari WA:</strong>
+              Buka grup WA → Info Grup → lihat daftar anggota → catat/copy nomor satu per satu, lalu tempel semua di kolom bawah ini (1 nomor per baris, boleh format apa saja: 08xx, +62xx, dengan spasi/strip — sistem akan membersihkan otomatis).
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Daftar Nomor HP di Grup WA</label>
+            <textarea class="form-input" id="waNomorInput" rows="8" placeholder="Contoh:&#10;0812-3456-7890&#10;+62 813 9999 1111&#10;085711112222&#10;..."></textarea>
+          </div>
+          <button class="btn-primary w-full" onclick="bandingkanGrupWA()">🔍 Bandingkan dengan Data Anggota</button>
+        </div>
+      </div>
+
+      <div id="waHasilBox" class="hidden">
+        <div class="rekap-grid mt-4" style="grid-template-columns: repeat(3,1fr);">
+          <div class="rekap-stat-card hadir">
+            <div class="rekap-stat-angka" id="waJmlSudah">0</div>
+            <div class="rekap-stat-label">✅ Sudah di Grup</div>
+          </div>
+          <div class="rekap-stat-card alfa">
+            <div class="rekap-stat-angka" id="waJmlBelum">0</div>
+            <div class="rekap-stat-label">❌ Belum di Grup</div>
+          </div>
+          <div class="rekap-stat-card izin">
+            <div class="rekap-stat-angka" id="waJmlTanpaNomor">0</div>
+            <div class="rekap-stat-label">📋 Tanpa No. HP</div>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title">❌ Belum Bergabung di Grup WA</h2>
+            <button class="btn-export" onclick="exportBelumWA()">⬇ Excel</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Nama</th><th>Jabatan</th><th>No. HP</th></tr></thead>
+              <tbody id="waBelumTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-header"><h2 class="card-title">📋 Anggota Tanpa Nomor HP Tercatat</h2></div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Nama</th><th>Jabatan</th></tr></thead>
+              <tbody id="waTanpaNomorTableBody"></tbody>
             </table>
           </div>
         </div>
