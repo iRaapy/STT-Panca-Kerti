@@ -1152,3 +1152,51 @@ select.form-input { cursor: pointer; }
 .qr-info {
   margin-top: 4px;
 }
+
+/* ─── MODUL EVENT ───────────────────────────────────────── */
+.scan-result-card {
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: left;
+}
+.scan-result-card.masuk {
+  background: #F0FFF4;
+  border: 1.5px solid #9AE6B4;
+}
+.scan-result-card.keluar {
+  background: #EBF8FF;
+  border: 1.5px solid #90CDF4;
+}
+.scan-result-card.error {
+  background: var(--red-bg);
+  border: 1.5px solid #FEB2B2;
+}
+.scan-result-card .nama { font-size: 1rem; font-weight: 700; color: var(--navy); }
+.scan-result-card .tipe { font-size: .82rem; margin-top: 2px; }
+.scan-result-card.masuk .tipe { color: #2F855A; }
+.scan-result-card.keluar .tipe { color: #2B6CB0; }
+.scan-result-card.error .tipe { color: var(--red); }
+
+.kontribusi-jam {
+  font-weight: 700;
+  color: var(--navy);
+}
+.sedang-aktif-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: .68rem;
+  background: #F0FFF4;
+  color: #2F855A;
+  font-weight: 600;
+}
+
+.kode-qr-mini {
+  font-family: monospace;
+  font-size: .8rem;
+  background: var(--bg);
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: var(--muted);
+}

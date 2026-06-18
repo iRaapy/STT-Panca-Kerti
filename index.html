@@ -14,6 +14,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
 
@@ -47,6 +48,9 @@
       </button>
       <button class="nav-item" data-page="qr" onclick="navigateTo('qr')">
         <span class="nav-icon">▦</span><span class="nav-label">Absen via QR</span>
+      </button>
+      <button class="nav-item" data-page="event" onclick="navigateTo('event')">
+        <span class="nav-icon">🎪</span><span class="nav-label">Event</span>
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -867,6 +871,146 @@
               <tr><td colspan="6" class="empty-row">Klik Refresh untuk memuat.</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── EVENT & PANITIA ─── -->
+    <section class="page" id="page-event">
+      <div class="page-header">
+        <h1 class="page-title">Event</h1>
+        <p class="page-subtitle">Kelola panitia event dan absensi kontribusi via QR</p>
+      </div>
+
+      <!-- LIST EVENT (tampil saat belum pilih event) -->
+      <div id="eventListView">
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">Buat Event Baru</h2></div>
+            <div class="form-body">
+              <div class="form-group">
+                <label class="form-label">Nama Event <span class="required">*</span></label>
+                <input type="text" class="form-input" id="evtNama" placeholder="Contoh: Odalan Pura Desa 2026" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Lokasi</label>
+                <input type="text" class="form-input" id="evtLokasi" placeholder="Contoh: Pura Desa" />
+              </div>
+              <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;">
+                  <label class="form-label">Tanggal Mulai <span class="required">*</span></label>
+                  <input type="date" class="form-input" id="evtTanggalMulai" />
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label class="form-label">Tanggal Selesai</label>
+                  <input type="date" class="form-input" id="evtTanggalSelesai" />
+                </div>
+              </div>
+              <div id="evtAlert" class="alert hidden"></div>
+              <button class="btn-primary w-full" id="evtSubmitBtn" onclick="buatEventBaru()">
+                <span class="btn-text">+ Buat Event</span>
+                <span class="btn-loading hidden">Membuat...</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">Info</h2></div>
+            <div class="form-body">
+              <div class="info-box">
+                <div class="info-icon">💡</div>
+                <div class="info-text">
+                  <strong>Cara kerja:</strong> setelah event dibuat, tambahkan panitia dari daftar anggota. Setiap panitia otomatis mendapat kode QR unik untuk absen kontribusi (scan masuk & keluar).
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title">Daftar Event</h2>
+            <button class="btn-secondary-sm" onclick="loadDaftarEvent()">↻ Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Nama Event</th><th>Tanggal</th><th>Lokasi</th><th>Panitia</th><th>Status</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="eventTableBody">
+                <tr><td colspan="6" class="empty-row">Klik Refresh untuk memuat.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- DETAIL EVENT (tampil saat 1 event dipilih) -->
+      <div id="eventDetailView" class="hidden">
+        <button class="btn-ghost" style="margin-bottom:14px;" onclick="kembaliKeListEvent()">← Kembali ke Daftar Event</button>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title" id="evtDetailNama">—</h2>
+            <span class="badge" id="evtDetailStatus">—</span>
+          </div>
+          <div class="form-body" style="padding-top:0;">
+            <div style="font-size:.85rem; color:var(--muted);" id="evtDetailInfo">—</div>
+          </div>
+        </div>
+
+        <div class="two-col mt-4">
+          <!-- Tambah Panitia -->
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">Tambah Panitia</h2></div>
+            <div class="form-body">
+              <div class="form-group">
+                <label class="form-label">Pilih Anggota <span class="required">*</span></label>
+                <input type="text" class="form-input" id="panitiaNamaInput" list="listAnggotaPanitia" placeholder="Ketik atau pilih nama anggota" autocomplete="off" />
+                <datalist id="listAnggotaPanitia"></datalist>
+              </div>
+              <div id="panitiaAlert" class="alert hidden"></div>
+              <button class="btn-primary w-full" id="panitiaSubmitBtn" onclick="tambahPanitiaBaru()">
+                <span class="btn-text">+ Tambah sebagai Panitia</span>
+                <span class="btn-loading hidden">Menyimpan...</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Scan QR Panitia -->
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">Scan QR Panitia</h2></div>
+            <div class="form-body" style="text-align:center;">
+              <div id="scannerPlaceholder">
+                <div class="placeholder-icon" style="font-size:2.4rem;">📷</div>
+                <p style="font-size:.85rem; color:var(--muted); margin-bottom:14px;">Scan QR panitia untuk mencatat Masuk/Keluar</p>
+                <button class="btn-primary w-full" onclick="mulaiScanner()">▦ Mulai Scan</button>
+              </div>
+              <div id="scannerBox" class="hidden">
+                <div id="qrReaderEvent" style="width:100%; max-width:320px; margin:0 auto; border-radius:10px; overflow:hidden;"></div>
+                <button class="btn-ghost w-full" style="margin-top:10px;" onclick="hentikanScanner()">Tutup Scanner</button>
+              </div>
+              <div id="scanResultBox" class="hidden" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daftar Panitia & Jam Kontribusi -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title">Daftar Panitia & Kontribusi</h2>
+            <button class="btn-secondary-sm" onclick="refreshDetailEvent()">↻ Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Nama</th><th>Status</th><th>Jumlah Scan</th><th>Total Kontribusi</th><th>Kode QR</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="panitiaTableBody">
+                <tr><td colspan="6" class="empty-row">Belum ada panitia.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>

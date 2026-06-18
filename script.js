@@ -38,7 +38,7 @@ function navigateTo(page) {
   document.querySelectorAll(".page").forEach(p =>
     p.classList.toggle("active", p.id === "page-" + page));
 
-  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi", dokumen: "Dokumen", qr: "Absen via QR" };
+  const titles = { dashboard: "Dashboard", absensi: "Modul Absensi", keuangan: "Modul Keuangan", anggota: "Daftar Anggota", rekap: "Rekap Absensi", dokumen: "Dokumen", qr: "Absen via QR", event: "Event" };
   document.getElementById("topbarTitle").textContent = titles[page] || page;
 
   if (page === "dashboard") loadDashboard();
@@ -47,6 +47,7 @@ function navigateTo(page) {
   if (page === "rekap")     initRekap();
   if (page === "dokumen")   loadDokumen();
   if (page === "qr")        loadDaftarSesiQR();
+  if (page === "event")     { kembaliKeListEvent(); loadDaftarEvent(); }
   closeSidebar();
 }
 
@@ -1417,4 +1418,241 @@ function konfirmasiTutupAbsensiManual() {
       setLoading("tutupAbsBtn", false);
     }
   };
+}
+
+// ═══ MODUL EVENT & PANITIA ════════════════════════════════
+
+let eventAktifId   = null;   // ID event yang sedang dilihat detailnya
+let html5QrScanner = null;   // instance scanner kamera
+
+async function buatEventBaru() {
+  const nama           = document.getElementById("evtNama").value.trim();
+  const lokasi         = document.getElementById("evtLokasi").value.trim();
+  const tanggalMulai   = document.getElementById("evtTanggalMulai").value;
+  const tanggalSelesai = document.getElementById("evtTanggalSelesai").value;
+
+  if (!nama || !tanggalMulai) {
+    showAlert("evtAlert", "error", "Nama event dan tanggal mulai wajib diisi.");
+    return;
+  }
+
+  setLoading("evtSubmitBtn", true);
+  try {
+    await writeAPI("buatEvent", { nama, lokasi, tanggalMulai, tanggalSelesai });
+    showAlert("evtAlert", "success", "✅ Event berhasil dibuat!");
+    document.getElementById("evtNama").value = "";
+    document.getElementById("evtLokasi").value = "";
+    document.getElementById("evtTanggalMulai").value = "";
+    document.getElementById("evtTanggalSelesai").value = "";
+    loadDaftarEvent();
+  } catch (err) {
+    showAlert("evtAlert", "error", "❌ Gagal: " + err.message);
+  } finally {
+    setLoading("evtSubmitBtn", false);
+  }
+}
+
+async function loadDaftarEvent() {
+  const tbody = document.getElementById("eventTableBody");
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="6">Memuat data...</td></tr>`;
+  try {
+    const result = await fetchAPI("getDaftarEvent");
+    const rows   = result.data || [];
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Belum ada event dibuat.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><strong>${r.nama}</strong></td>
+        <td>${formatTanggal(r.tanggalMulai)}${r.tanggalSelesai !== r.tanggalMulai ? " – " + formatTanggal(r.tanggalSelesai) : ""}</td>
+        <td>${r.lokasi || "—"}</td>
+        <td>${r.jumlahPanitia} orang</td>
+        <td><span class="status-badge ${r.status === 'Aktif' ? 'hadir' : 'alfa'}">${r.status}</span></td>
+        <td>
+          <button class="btn-export" onclick="bukaDetailEvent('${r.id}')">Kelola</button>
+        </td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-row">❌ Error: ${err.message}</td></tr>`;
+  }
+}
+
+async function bukaDetailEvent(eventId) {
+  eventAktifId = eventId;
+  document.getElementById("eventListView").classList.add("hidden");
+  document.getElementById("eventDetailView").classList.remove("hidden");
+
+  // Isi datalist nama anggota untuk form tambah panitia
+  try {
+    const result = await fetchAPI("getAnggota");
+    const datalist = document.getElementById("listAnggotaPanitia");
+    datalist.innerHTML = (result.data || []).map(a => `<option value="${a.nama}">`).join("");
+  } catch (e) { /* abaikan jika gagal load nama */ }
+
+  await refreshDetailEvent();
+}
+
+function kembaliKeListEvent() {
+  eventAktifId = null;
+  hentikanScanner();
+  document.getElementById("eventDetailView").classList.add("hidden");
+  document.getElementById("eventListView").classList.remove("hidden");
+}
+
+async function refreshDetailEvent() {
+  if (!eventAktifId) return;
+  try {
+    const result = await fetchAPI("getDetailEvent", { eventId: eventAktifId });
+    const { event, panitia } = result.data;
+
+    document.getElementById("evtDetailNama").textContent = event.nama;
+    document.getElementById("evtDetailStatus").textContent = event.status;
+    document.getElementById("evtDetailStatus").className =
+      "badge " + (event.status === "Aktif" ? "" : "");
+    document.getElementById("evtDetailInfo").textContent =
+      (event.lokasi ? event.lokasi + " · " : "") +
+      formatTanggal(event.tanggalMulai) +
+      (event.tanggalSelesai !== event.tanggalMulai ? " – " + formatTanggal(event.tanggalSelesai) : "");
+
+    const tbody = document.getElementById("panitiaTableBody");
+    if (!panitia.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Belum ada panitia. Tambahkan dari form di atas.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = panitia.map(p => `
+      <tr>
+        <td><strong>${p.nama}</strong></td>
+        <td>
+          ${p.sedangDiDalam
+            ? `<span class="status-badge hadir">Di Lokasi</span><span class="sedang-aktif-badge">sejak ${new Date(p.jamMasukTerakhir).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</span>`
+            : `<span class="status-badge alfa">Belum/Sudah Pulang</span>`}
+        </td>
+        <td>${p.jumlahScan}x</td>
+        <td class="kontribusi-jam">${formatDurasi(p.totalMenit)}</td>
+        <td><span class="kode-qr-mini">${p.kodeQR}</span></td>
+        <td style="display:flex; gap:6px;">
+          <button class="btn-export" onclick="lihatQRPanitia('${p.nama}', '${p.kodeQR}')">QR</button>
+          <button class="btn-hapus" onclick="konfirmasiHapusPanitia('${p.id}', '${p.nama}')">Hapus</button>
+        </td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    alert("❌ Gagal memuat detail event: " + err.message);
+  }
+}
+
+function formatDurasi(menit) {
+  if (!menit || menit <= 0) return "0 menit";
+  const jam = Math.floor(menit / 60);
+  const sisaMenit = menit % 60;
+  if (jam === 0) return sisaMenit + " menit";
+  if (sisaMenit === 0) return jam + " jam";
+  return jam + " jam " + sisaMenit + " menit";
+}
+
+async function tambahPanitiaBaru() {
+  const nama = document.getElementById("panitiaNamaInput").value.trim();
+  if (!nama) { showAlert("panitiaAlert", "error", "Pilih atau ketik nama anggota."); return; }
+  if (!eventAktifId) return;
+
+  setLoading("panitiaSubmitBtn", true);
+  try {
+    await writeAPI("tambahPanitia", { eventId: eventAktifId, nama });
+    showAlert("panitiaAlert", "success", "✅ " + nama + " berhasil ditambahkan sebagai panitia!");
+    document.getElementById("panitiaNamaInput").value = "";
+    refreshDetailEvent();
+  } catch (err) {
+    showAlert("panitiaAlert", "error", "❌ Gagal: " + err.message);
+  } finally {
+    setLoading("panitiaSubmitBtn", false);
+  }
+}
+
+function konfirmasiHapusPanitia(id, nama) {
+  document.getElementById("modalBody").textContent =
+    `${nama} akan dihapus dari daftar panitia event ini. Riwayat scan tetap tersimpan.`;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      await writeAPI("hapusPanitia", { id });
+      refreshDetailEvent();
+    } catch (err) {
+      alert("❌ Gagal menghapus: " + err.message);
+    }
+  };
+}
+
+function lihatQRPanitia(nama, kodeQR) {
+  const box = document.createElement("div");
+  new QRCode(box, { text: kodeQR, width: 200, height: 200, colorDark: "#1E2B4A", colorLight: "#ffffff" });
+
+  document.getElementById("modalBody").innerHTML =
+    `<div style="text-align:center;">
+       <div style="font-weight:700; margin-bottom:10px; color:var(--navy);">${nama}</div>
+       <div style="display:inline-block; padding:10px; background:#fff; border:2px solid var(--border); border-radius:10px;">${box.innerHTML}</div>
+       <div style="margin-top:10px; font-size:.78rem; color:var(--muted);">Kode: ${kodeQR}</div>
+     </div>`;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = closeModal;
+}
+
+// ─── Scanner Kamera untuk Scan QR Panitia ──────────────────
+
+function mulaiScanner() {
+  document.getElementById("scannerPlaceholder").classList.add("hidden");
+  document.getElementById("scannerBox").classList.remove("hidden");
+  document.getElementById("scanResultBox").classList.add("hidden");
+
+  html5QrScanner = new Html5Qrcode("qrReaderEvent");
+  html5QrScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 220 },
+    onScanSuccess,
+    () => {} // error callback per-frame, diabaikan (normal saat belum ada QR di kamera)
+  ).catch(err => {
+    document.getElementById("scanResultBox").classList.remove("hidden");
+    document.getElementById("scanResultBox").innerHTML =
+      `<div class="scan-result-card error"><div class="nama">Gagal membuka kamera</div><div class="tipe">${err}</div></div>`;
+  });
+}
+
+function hentikanScanner() {
+  if (html5QrScanner) {
+    html5QrScanner.stop().catch(() => {});
+    html5QrScanner = null;
+  }
+  document.getElementById("scannerBox").classList.add("hidden");
+  document.getElementById("scannerPlaceholder").classList.remove("hidden");
+}
+
+let sedangProsesScan = false;
+
+async function onScanSuccess(decodedText) {
+  if (sedangProsesScan) return; // cegah scan ganda dari frame berturutan
+  sedangProsesScan = true;
+
+  try {
+    const result = await writeAPI("scanPanitia", { kode: decodedText });
+    const resultBox = document.getElementById("scanResultBox");
+    resultBox.classList.remove("hidden");
+    resultBox.innerHTML = `
+      <div class="scan-result-card ${result.tipe === 'Masuk' ? 'masuk' : 'keluar'}">
+        <div class="nama">${result.nama}</div>
+        <div class="tipe">${result.tipe === 'Masuk' ? '✅ Tercatat Masuk' : '🚪 Tercatat Keluar'} — ${new Date(result.waktu).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>`;
+    refreshDetailEvent();
+  } catch (err) {
+    const resultBox = document.getElementById("scanResultBox");
+    resultBox.classList.remove("hidden");
+    resultBox.innerHTML = `<div class="scan-result-card error"><div class="nama">QR Tidak Valid</div><div class="tipe">${err.message}</div></div>`;
+  }
+
+  // Beri jeda 2.5 detik sebelum bisa scan lagi (mencegah scan berulang untuk QR yang sama)
+  setTimeout(() => { sedangProsesScan = false; }, 2500);
 }
