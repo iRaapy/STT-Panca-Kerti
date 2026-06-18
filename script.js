@@ -750,10 +750,40 @@ async function exportAbsensiExcelAll() {
   } catch(e) { alert("Gagal mengambil data: " + e.message); }
 }
 
-function exportKeuanganExcel() {
-  const rows = getKeuanganRows();
-  if (!rows) return;
-  downloadExcel(rows, "Data_Keuangan_STT_Panca_Kerti");
+async function exportKeuanganExcel() {
+  try {
+    const jenis    = document.getElementById("keuFilterJenis").value;
+    const kategori = document.getElementById("keuFilterKat").value.trim();
+    const params   = {};
+    if (jenis)    params.jenis    = jenis;
+    if (kategori) params.kategori = kategori;
+
+    const result = await fetchAPI("getKeuangan", params);
+    const data   = result.data || [];
+    if (!data.length) { alert("Tidak ada data keuangan untuk diexport."); return; }
+
+    let totalPemasukan = 0, totalPengeluaran = 0;
+    const rows = data.map((r, i) => {
+      if (r.jenis === "Pemasukan") totalPemasukan += r.nominal;
+      else totalPengeluaran += r.nominal;
+      return {
+        "No"        : i + 1,
+        "Tanggal"   : formatTanggal(r.tanggal),
+        "Jenis"     : r.jenis,
+        "Kategori"  : r.kategori,
+        "Nominal"   : r.nominal,
+        "Keterangan": r.keterangan || ""
+      };
+    });
+
+    // Baris kosong pemisah + ringkasan total
+    rows.push({ "No": "", "Tanggal": "", "Jenis": "", "Kategori": "", "Nominal": "", "Keterangan": "" });
+    rows.push({ "No": "", "Tanggal": "", "Jenis": "", "Kategori": "TOTAL PEMASUKAN", "Nominal": totalPemasukan, "Keterangan": "" });
+    rows.push({ "No": "", "Tanggal": "", "Jenis": "", "Kategori": "TOTAL PENGELUARAN", "Nominal": totalPengeluaran, "Keterangan": "" });
+    rows.push({ "No": "", "Tanggal": "", "Jenis": "", "Kategori": "SALDO", "Nominal": totalPemasukan - totalPengeluaran, "Keterangan": "" });
+
+    downloadExcel(rows, "Data_Keuangan_STT_Panca_Kerti");
+  } catch (e) { alert("Gagal mengambil data: " + e.message); }
 }
 
 function getAbsensiRows() {
@@ -861,18 +891,60 @@ async function exportAbsensiPDFAll() {
   } catch(e) { alert("Gagal: " + e.message); }
 }
 
-function exportKeuanganPDF() {
-  const rows = getKeuanganRows();
-  if (!rows) return;
-  const doc = getPDF("Data Keuangan");
-  doc.autoTable({
-    head: [["No","Tanggal","Jenis","Kategori","Nominal","Keterangan"]],
-    body: rows.map(r => [r.No,r.Tanggal,r.Jenis,r.Kategori,r.Nominal,r.Keterangan]),
-    startY: 28,
-    headStyles: { fillColor: [30,43,74], textColor: 255 },
-    alternateRowStyles: { fillColor: [245,247,250] }
-  });
-  doc.save("Data_Keuangan_STT_Panca_Kerti.pdf");
+async function exportKeuanganPDF() {
+  try {
+    const jenis    = document.getElementById("keuFilterJenis").value;
+    const kategori = document.getElementById("keuFilterKat").value.trim();
+    const params   = {};
+    if (jenis)    params.jenis    = jenis;
+    if (kategori) params.kategori = kategori;
+
+    const result = await fetchAPI("getKeuangan", params);
+    const data   = result.data || [];
+    if (!data.length) { alert("Tidak ada data keuangan untuk diexport."); return; }
+
+    let totalPemasukan = 0, totalPengeluaran = 0;
+    const body = data.map((r, i) => {
+      if (r.jenis === "Pemasukan") totalPemasukan += r.nominal;
+      else totalPengeluaran += r.nominal;
+      const tanda = r.jenis === "Pemasukan" ? "+" : "-"; // hyphen biasa, aman untuk font PDF
+      return [
+        i + 1, formatTanggal(r.tanggal), r.jenis, r.kategori,
+        tanda + formatRupiahPolos(r.nominal), r.keterangan || ""
+      ];
+    });
+
+    const saldo = totalPemasukan - totalPengeluaran;
+
+    const doc = getPDF("Data Keuangan");
+    doc.autoTable({
+      head: [["No","Tanggal","Jenis","Kategori","Nominal","Keterangan"]],
+      body: body,
+      startY: 28,
+      headStyles: { fillColor: [30,43,74], textColor: 255 },
+      alternateRowStyles: { fillColor: [245,247,250] },
+      columnStyles: { 4: { halign: "right" } },
+      foot: [
+        ["", "", "", "Total Pemasukan", "+" + formatRupiahPolos(totalPemasukan), ""],
+        ["", "", "", "Total Pengeluaran", "-" + formatRupiahPolos(totalPengeluaran), ""],
+        ["", "", "", "SALDO", (saldo >= 0 ? "+" : "-") + formatRupiahPolos(Math.abs(saldo)), ""]
+      ],
+      footStyles: { fillColor: [232,201,122], textColor: [30,43,74], fontStyle: "bold" },
+      didParseCell: function (hookData) {
+        // Baris "SALDO" dibuat lebih menonjol
+        if (hookData.section === "foot" && hookData.row.index === 2) {
+          hookData.cell.styles.fillColor = [30,43,74];
+          hookData.cell.styles.textColor = 255;
+        }
+      }
+    });
+    doc.save("Data_Keuangan_STT_Panca_Kerti.pdf");
+  } catch (e) { alert("Gagal mengambil data: " + e.message); }
+}
+
+// Format Rupiah tanpa simbol "Rp" dan tanpa karakter unicode khusus, aman untuk PDF
+function formatRupiahPolos(angka) {
+  return "Rp " + Math.round(angka).toLocaleString("id-ID");
 }
 
 function exportRekapPDF() {
@@ -949,6 +1021,90 @@ function cetakRekap() {
   const hasil = document.getElementById("rekapHasil");
   if (hasil.classList.contains("hidden")) { alert("Tampilkan rekap terlebih dahulu."); return; }
   cetakHalaman("page-rekap");
+}
+
+// Cetak khusus modul Keuangan: ambil data API langsung (bukan scraping HTML),
+// tampilan rapi, dan otomatis menyertakan baris Total Pemasukan/Pengeluaran/Saldo.
+async function cetakKeuangan() {
+  try {
+    const jenis    = document.getElementById("keuFilterJenis").value;
+    const kategori = document.getElementById("keuFilterKat").value.trim();
+    const params   = {};
+    if (jenis)    params.jenis    = jenis;
+    if (kategori) params.kategori = kategori;
+
+    const result = await fetchAPI("getKeuangan", params);
+    const data   = result.data || [];
+    if (!data.length) { alert("Tidak ada data keuangan untuk dicetak."); return; }
+
+    let totalPemasukan = 0, totalPengeluaran = 0;
+    const baris = data.map((r, i) => {
+      if (r.jenis === "Pemasukan") totalPemasukan += r.nominal;
+      else totalPengeluaran += r.nominal;
+      const isPos = r.jenis === "Pemasukan";
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${formatTanggal(r.tanggal)}</td>
+          <td><span class="badge-cetak ${isPos ? 'pos' : 'neg'}">${r.jenis}</span></td>
+          <td>${r.kategori}</td>
+          <td class="nominal ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : '-'}${formatRupiahPolos(r.nominal)}</td>
+          <td>${r.keterangan || '—'}</td>
+        </tr>`;
+    }).join("");
+
+    const saldo = totalPemasukan - totalPengeluaran;
+
+    const w = window.open("", "_blank");
+    w.document.write(`
+      <!DOCTYPE html><html><head>
+      <meta charset="UTF-8">
+      <title>STT Panca Kerti — Laporan Keuangan</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #2D3748; padding: 30px 36px; }
+        .header { display:flex; align-items:center; gap:14px; border-bottom: 3px solid #1E2B4A; padding-bottom:14px; margin-bottom:18px; }
+        .header img { width:50px; height:50px; object-fit:contain; }
+        .header h1 { color: #1E2B4A; font-size: 19px; margin:0; }
+        .header p  { color: #718096; font-size: 12px; margin:2px 0 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+        th { background: #1E2B4A; color: #fff; padding: 9px 8px; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.02em; }
+        td { padding: 8px; border-bottom: 1px solid #E2E8F0; }
+        tr:nth-child(even) td { background: #F7F9FC; }
+        .nominal { text-align: right; font-weight:600; white-space:nowrap; }
+        .nominal.pos { color: #2F855A; }
+        .nominal.neg { color: #C53030; }
+        .badge-cetak { padding:3px 9px; border-radius:12px; font-size:10.5px; font-weight:600; }
+        .badge-cetak.pos { background:#F0FFF4; color:#2F855A; }
+        .badge-cetak.neg { background:#FFF5F5; color:#C53030; }
+        tfoot td { font-weight:700; border-top: 2px solid #1E2B4A; background:#fff !important; }
+        tfoot tr.saldo td { background:#1E2B4A !important; color:#fff; font-size:13px; }
+        .no-print { display:none; }
+        @media print { body { padding: 10px 18px; } }
+      </style></head><body>
+      <div class="header">
+        <img src="logo.png" alt="logo" onerror="this.style.display='none'" />
+        <div>
+          <h1>STT Panca Kerti — Laporan Keuangan</h1>
+          <p>Dicetak: ${new Date().toLocaleDateString("id-ID",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>No</th><th>Tanggal</th><th>Jenis</th><th>Kategori</th><th style="text-align:right;">Nominal</th><th>Keterangan</th></tr>
+        </thead>
+        <tbody>${baris}</tbody>
+        <tfoot>
+          <tr><td colspan="4"></td><td class="nominal pos">+${formatRupiahPolos(totalPemasukan)}</td><td>Total Pemasukan</td></tr>
+          <tr><td colspan="4"></td><td class="nominal neg">-${formatRupiahPolos(totalPengeluaran)}</td><td>Total Pengeluaran</td></tr>
+          <tr class="saldo"><td colspan="4"></td><td class="nominal" style="color:#fff;">${saldo >= 0 ? '+' : '-'}${formatRupiahPolos(Math.abs(saldo))}</td><td>SALDO AKHIR</td></tr>
+        </tfoot>
+      </table>
+      <script>window.onload=()=>{window.print();}<\/script>
+      </body></html>
+    `);
+    w.document.close();
+  } catch (e) { alert("Gagal memuat data: " + e.message); }
 }
 
 // ═══ UPLOAD DOKUMEN (Google Drive) ═══════════════════════

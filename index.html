@@ -526,7 +526,7 @@
             <span class="badge" id="keuBadge">— data</span>
             <button class="btn-export" onclick="exportKeuanganExcel()">⬇ Excel</button>
             <button class="btn-export" onclick="exportKeuanganPDF()">⬇ PDF</button>
-            <button class="btn-export" onclick="cetakHalaman('page-keuangan')">🖨 Cetak</button>
+            <button class="btn-export" onclick="cetakKeuangan()">🖨 Cetak</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -748,7 +748,7 @@
               <div class="export-label">🖨 Cetak Halaman</div>
               <div class="export-btns">
                 <button class="btn-export-lg" onclick="navigateTo('anggota');setTimeout(()=>cetakHalaman('page-anggota'),500)">Anggota</button>
-                <button class="btn-export-lg" onclick="navigateTo('keuangan');setTimeout(()=>cetakHalaman('page-keuangan'),500)">Keuangan</button>
+                <button class="btn-export-lg" onclick="cetakKeuangan()">Keuangan</button>
               </div>
             </div>
           </div>
