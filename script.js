@@ -1743,7 +1743,10 @@ async function bandingkanGrupWA() {
     return;
   }
 
-  const nomorGrupSet = new Set(daftarNomorWADB.map(n => n.nomor));
+  // Normalisasi juga sisi database grup WA — supaya tetap cocok meski data
+  // di sheet "Nomor_Grup_WA" formatnya belum/sudah dirapikan ke 0xxx,
+  // atau ada sisa format 62xxx dari sebelum migrasi.
+  const nomorGrupSet = new Set(daftarNomorWADB.map(n => normalisasiNomor(n.nomor)));
 
   try {
     const result   = await fetchAPI("getAnggota");
