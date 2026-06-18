@@ -127,12 +127,13 @@
         <p class="page-subtitle">Kelola data anggota organisasi STT Panca Kerti</p>
       </div>
       <div class="two-col">
-        <!-- Form Tambah Anggota -->
+        <!-- Form Tambah/Edit Anggota -->
         <div class="card">
           <div class="card-header">
-            <h2 class="card-title">Tambah Anggota</h2>
+            <h2 class="card-title" id="angFormTitle">Tambah Anggota</h2>
           </div>
           <div class="form-body">
+            <input type="hidden" id="angEditId" value="" />
             <div class="form-group">
               <label class="form-label">Nama Lengkap <span class="required">*</span></label>
               <input type="text" class="form-input" id="angNama" placeholder="Nama lengkap anggota" />
@@ -164,10 +165,13 @@
               <input type="text" class="form-input" id="angKontak" placeholder="08xxxxxxxxxx (opsional)" />
             </div>
             <div id="angAlert" class="alert hidden"></div>
-            <button class="btn-primary w-full" id="angSubmitBtn" onclick="submitAnggota()">
-              <span class="btn-text">Tambah Anggota</span>
-              <span class="btn-loading hidden">Menyimpan...</span>
-            </button>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-primary w-full" id="angSubmitBtn" onclick="submitAnggota()">
+                <span class="btn-text">Tambah Anggota</span>
+                <span class="btn-loading hidden">Menyimpan...</span>
+              </button>
+              <button class="btn-ghost hidden" id="angBatalBtn" style="white-space:nowrap; padding:0 18px;" onclick="batalEditAnggota()">Batal</button>
+            </div>
           </div>
         </div>
 

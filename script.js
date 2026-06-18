@@ -187,21 +187,30 @@ function renderDashRecentTable(rows) {
 
 // ═══ MODUL ANGGOTA ════════════════════════════════════════
 async function submitAnggota() {
-  const nama               = document.getElementById("angNama").value.trim();
-  const jabatan            = document.getElementById("angJabatan").value;
-  const kontak             = document.getElementById("angKontak").value.trim();
-  const statusKeanggotaan  = document.getElementById("angStatusKeanggotaan").value;
+  const editId              = document.getElementById("angEditId").value;
+  const nama                = document.getElementById("angNama").value.trim();
+  const jabatan             = document.getElementById("angJabatan").value;
+  const kontak              = document.getElementById("angKontak").value.trim();
+  const statusKeanggotaan   = document.getElementById("angStatusKeanggotaan").value;
 
   if (!nama) { showAlert("angAlert", "error", "Nama anggota wajib diisi."); return; }
 
   setLoading("angSubmitBtn", true);
   try {
-    await writeAPI("tambahAnggota", { nama, jabatan, kontak, statusKeanggotaan });
-    showAlert("angAlert", "success", "✅ Anggota berhasil ditambahkan!");
-    document.getElementById("angNama").value                  = "";
-    document.getElementById("angKontak").value                = "";
-    document.getElementById("angJabatan").value               = "Anggota";
-    document.getElementById("angStatusKeanggotaan").value     = "Aktif";
+    if (editId) {
+      // Mode edit
+      await writeAPI("editAnggota", { id: editId, nama, jabatan, kontak, statusKeanggotaan });
+      showAlert("angAlert", "success", "✅ Data anggota berhasil diperbarui!");
+      batalEditAnggota(); // reset form & kembali ke mode tambah
+    } else {
+      // Mode tambah baru
+      await writeAPI("tambahAnggota", { nama, jabatan, kontak, statusKeanggotaan });
+      showAlert("angAlert", "success", "✅ Anggota berhasil ditambahkan!");
+      document.getElementById("angNama").value                  = "";
+      document.getElementById("angKontak").value                = "";
+      document.getElementById("angJabatan").value               = "Anggota";
+      document.getElementById("angStatusKeanggotaan").value     = "Aktif";
+    }
     loadAnggota();
   } catch (err) {
     showAlert("angAlert", "error", "❌ Gagal: " + err.message);
@@ -254,13 +263,44 @@ function renderTabelAnggota(rows) {
       <td><span class="jabatan-badge">${r.jabatan || "Anggota"}</span></td>
       <td><span class="status-keanggotaan-badge ${(r.statusKeanggotaan || 'aktif').toLowerCase()}">${r.statusKeanggotaan || "Aktif"}</span></td>
       <td>${r.kontak || "—"}</td>
-      <td>
+      <td style="display:flex; gap:6px;">
+        <button class="btn-export" onclick='mulaiEditAnggota(${JSON.stringify(r)})'>
+          Edit
+        </button>
         <button class="btn-hapus" onclick="konfirmasiHapus('anggota', '${r.id}', '${r.nama}')">
           Hapus
         </button>
       </td>
     </tr>
   `).join("");
+}
+
+function mulaiEditAnggota(data) {
+  document.getElementById("angEditId").value             = data.id;
+  document.getElementById("angNama").value                = data.nama || "";
+  document.getElementById("angJabatan").value              = data.jabatan || "Anggota";
+  document.getElementById("angStatusKeanggotaan").value    = data.statusKeanggotaan || "Aktif";
+  document.getElementById("angKontak").value               = data.kontak || "";
+
+  document.getElementById("angFormTitle").textContent = "Edit Anggota: " + data.nama;
+  document.querySelector("#angSubmitBtn .btn-text").textContent = "Simpan Perubahan";
+  document.getElementById("angBatalBtn").classList.remove("hidden");
+
+  // Scroll ke form agar terlihat
+  document.getElementById("angFormTitle").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function batalEditAnggota() {
+  document.getElementById("angEditId").value = "";
+  document.getElementById("angNama").value    = "";
+  document.getElementById("angKontak").value  = "";
+  document.getElementById("angJabatan").value = "Anggota";
+  document.getElementById("angStatusKeanggotaan").value = "Aktif";
+
+  document.getElementById("angFormTitle").textContent = "Tambah Anggota";
+  document.querySelector("#angSubmitBtn .btn-text").textContent = "Tambah Anggota";
+  document.getElementById("angBatalBtn").classList.add("hidden");
+  document.getElementById("angAlert").classList.add("hidden");
 }
 
 /** Update dropdown nama di form Absensi */
