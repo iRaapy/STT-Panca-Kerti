@@ -1660,19 +1660,20 @@ async function onScanSuccess(decodedText) {
 
 // ═══ CEK GRUP WA (Database Permanen) ═════════════════════
 
-// Normalisasi nomor HP ke format standar (62xxxxxxxxxx) agar bisa dibandingkan
-// meski format aslinya beda-beda (08xx, +62xx, dengan spasi/strip, dll).
+// Normalisasi nomor HP ke format standar (0xxxxxxxxxx) agar bisa dibandingkan
+// meski format aslinya beda-beda (62xx, +62xx, 8xx tanpa 0, dengan spasi/strip, dll).
+// Format "0 di depan" dipakai supaya konsisten dengan kolom Kontak di Daftar Anggota.
 function normalisasiNomor(nomor) {
   if (!nomor) return "";
   let bersih = nomor.toString().replace(/[^\d]/g, ""); // hanya sisakan digit
   if (!bersih) return "";
 
-  if (bersih.startsWith("0")) {
-    bersih = "62" + bersih.substring(1);
+  if (bersih.startsWith("62") && bersih.length > 9) {
+    bersih = "0" + bersih.substring(2);
   } else if (bersih.startsWith("8")) {
-    bersih = "62" + bersih;
+    bersih = "0" + bersih;
   }
-  // kalau sudah diawali 62, biarkan apa adanya
+  // kalau sudah diawali 0, biarkan apa adanya
   return bersih;
 }
 
