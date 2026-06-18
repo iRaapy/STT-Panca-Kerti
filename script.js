@@ -48,6 +48,7 @@ function navigateTo(page) {
   if (page === "dokumen")   loadDokumen();
   if (page === "qr")        loadDaftarSesiQR();
   if (page === "event")     { kembaliKeListEvent(); loadDaftarEvent(); }
+  if (page === "wagroup")   loadDatabaseNomorWA();
   closeSidebar();
 }
 
@@ -1657,7 +1658,7 @@ async function onScanSuccess(decodedText) {
   setTimeout(() => { sedangProsesScan = false; }, 2500);
 }
 
-// ═══ CEK GRUP WA ══════════════════════════════════════════
+// ═══ CEK GRUP WA (Database Permanen) ═════════════════════
 
 // Normalisasi nomor HP ke format standar (62xxxxxxxxxx) agar bisa dibandingkan
 // meski format aslinya beda-beda (08xx, +62xx, dengan spasi/strip, dll).
@@ -1675,21 +1676,73 @@ function normalisasiNomor(nomor) {
   return bersih;
 }
 
-async function bandingkanGrupWA() {
-  const rawInput = document.getElementById("waNomorInput").value.trim();
-  if (!rawInput) { alert("Tempel daftar nomor HP grup WA terlebih dahulu."); return; }
+let daftarNomorWADB = []; // cache database nomor WA tersimpan
 
-  // Pecah per baris, normalisasi, buang baris kosong, jadikan Set untuk lookup cepat
-  const nomorGrupSet = new Set(
+async function loadDatabaseNomorWA() {
+  try {
+    const result = await fetchAPI("getNomorWA");
+    daftarNomorWADB = result.data || [];
+    document.getElementById("waDbBadge").textContent = daftarNomorWADB.length + " nomor tersimpan";
+  } catch (err) {
+    document.getElementById("waDbBadge").textContent = "Gagal memuat";
+  }
+}
+
+async function simpanNomorWABaru() {
+  const rawInput = document.getElementById("waNomorInput").value.trim();
+  if (!rawInput) { showAlert("waSimpanAlert", "error", "Tempel daftar nomor HP terlebih dahulu."); return; }
+
+  const nomorList = [...new Set(
     rawInput.split("\n")
       .map(n => normalisasiNomor(n))
-      .filter(n => n.length >= 8) // buang yang terlalu pendek / tidak valid
-  );
+      .filter(n => n.length >= 8)
+  )];
 
-  if (nomorGrupSet.size === 0) {
-    alert("Tidak ada nomor valid yang terdeteksi dari teks yang ditempel.");
+  if (nomorList.length === 0) {
+    showAlert("waSimpanAlert", "error", "Tidak ada nomor valid yang terdeteksi.");
     return;
   }
+
+  setLoading("waSimpanBtn", true);
+  try {
+    const result = await writeAPI("simpanNomorWA", { nomorList });
+    showAlert("waSimpanAlert", "success", "✅ " + result.message);
+    document.getElementById("waNomorInput").value = "";
+    await loadDatabaseNomorWA();
+  } catch (err) {
+    showAlert("waSimpanAlert", "error", "❌ Gagal: " + err.message);
+  } finally {
+    setLoading("waSimpanBtn", false);
+  }
+}
+
+function konfirmasiHapusSemuaNomorWA() {
+  document.getElementById("modalBody").textContent =
+    "Seluruh database nomor grup WA (" + daftarNomorWADB.length + " nomor) akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.";
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      await writeAPI("hapusSemuaNomorWA", {});
+      await loadDatabaseNomorWA();
+      document.getElementById("waHasilBox").classList.add("hidden");
+      alert("✅ Database nomor WA berhasil dikosongkan.");
+    } catch (err) {
+      alert("❌ Gagal menghapus: " + err.message);
+    }
+  };
+}
+
+async function bandingkanGrupWA() {
+  if (daftarNomorWADB.length === 0) {
+    await loadDatabaseNomorWA();
+  }
+  if (daftarNomorWADB.length === 0) {
+    alert("Database nomor grup WA masih kosong. Simpan nomor terlebih dahulu sebelum membandingkan.");
+    return;
+  }
+
+  const nomorGrupSet = new Set(daftarNomorWADB.map(n => n.nomor));
 
   try {
     const result   = await fetchAPI("getAnggota");

@@ -1022,24 +1022,37 @@
     <section class="page" id="page-wagroup">
       <div class="page-header">
         <h1 class="page-title">Cek Grup WA</h1>
-        <p class="page-subtitle">Bandingkan nomor HP anggota di aplikasi dengan nomor yang sudah ada di grup WhatsApp</p>
+        <p class="page-subtitle">Simpan & bandingkan database nomor grup WhatsApp dengan data anggota</p>
       </div>
 
       <div class="card">
-        <div class="card-header"><h2 class="card-title">Tempel Daftar Nomor Grup WA</h2></div>
+        <div class="card-header">
+          <h2 class="card-title">Database Nomor Grup WA</h2>
+          <span class="badge" id="waDbBadge">— nomor tersimpan</span>
+        </div>
         <div class="form-body">
           <div class="info-box">
             <div class="info-icon">💡</div>
             <div class="info-text">
               <strong>Cara mendapatkan nomor dari WA:</strong>
-              Buka grup WA → Info Grup → lihat daftar anggota → catat/copy nomor satu per satu, lalu tempel semua di kolom bawah ini (1 nomor per baris, boleh format apa saja: 08xx, +62xx, dengan spasi/strip — sistem akan membersihkan otomatis).
+              Buka grup WA → Info Grup → lihat daftar anggota → catat/copy nomor satu per satu, lalu tempel semua di kolom bawah ini (1 nomor per baris, boleh format apa saja: 08xx, +62xx, dengan spasi/strip — sistem akan membersihkan otomatis). Nomor yang sudah pernah disimpan tidak akan diduplikasi — cukup tempel nomor baru kapan saja anggota grup bertambah.
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Daftar Nomor HP di Grup WA</label>
+            <label class="form-label">Tempel Nomor HP Baru (1 per baris)</label>
             <textarea class="form-input" id="waNomorInput" rows="8" placeholder="Contoh:&#10;0812-3456-7890&#10;+62 813 9999 1111&#10;085711112222&#10;..."></textarea>
           </div>
-          <button class="btn-primary w-full" onclick="bandingkanGrupWA()">🔍 Bandingkan dengan Data Anggota</button>
+          <div id="waSimpanAlert" class="alert hidden"></div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-primary w-full" id="waSimpanBtn" onclick="simpanNomorWABaru()">
+              <span class="btn-text">💾 Simpan ke Database</span>
+              <span class="btn-loading hidden">Menyimpan...</span>
+            </button>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button class="btn-ghost w-full" onclick="bandingkanGrupWA()">🔍 Bandingkan dengan Data Anggota</button>
+            <button class="btn-ghost" style="white-space:nowrap; padding:0 16px;" onclick="konfirmasiHapusSemuaNomorWA()">🗑 Kosongkan DB</button>
+          </div>
         </div>
       </div>
 
