@@ -599,10 +599,15 @@ async function tampilkanRekap() {
       fetchAPI("getAbsensi", params),
       fetchAPI("getStatusBayar", { nama })
     ]);
-    let rows = result.data || [];
+    // allRows = semua data absensi anggota ini, tanpa filter tanggal apapun
+    // Dipakai untuk hitung dedosan (tertunggak & sudah bayar) agar akurat
+    const allRows = result.data || [];
+
+    // rows = data yang difilter sesuai rentang yang dipilih user (untuk tabel & statistik kartu)
+    let rows = [...allRows];
     const lunasSampaiTanggal = statusBayarResult.data?.lunasSampaiTanggal || null;
 
-    // Filter tanggal jika diisi
+    // Filter tanggal jika diisi (hanya berlaku untuk kartu statistik & tabel riwayat)
     if (dari)   rows = rows.filter(r => r.tanggal >= dari);
     if (sampai) rows = rows.filter(r => r.tanggal <= sampai);
 
@@ -610,14 +615,11 @@ async function tampilkanRekap() {
     const stat = { Hadir: 0, Izin: 0, Sakit: 0, Alfa: 0 };
     rows.forEach(r => { if (stat[r.status] !== undefined) stat[r.status]++; });
 
-    // Ambil SEMUA data absensi tanpa filter tanggal (untuk hitung dedosan sudah bayar)
-    const allRows = result.data || [];
-
-    // Khusus dedosan: kalau anggota sudah pernah bayar, hanya hitung record
-    // SETELAH tanggal lunas terakhir (dedosan sebelumnya dianggap lunas)
+    // Khusus dedosan: pakai allRows (BUKAN rows) agar tidak terpengaruh filter dari/sampai.
+    // Kalau anggota sudah pernah bayar, hanya hitung record SETELAH tanggal lunas terakhir.
     const rowsDedosan = lunasSampaiTanggal
-      ? rows.filter(r => r.tanggal > lunasSampaiTanggal)
-      : rows;
+      ? allRows.filter(r => r.tanggal > lunasSampaiTanggal)
+      : allRows;
     const statDedosan = { Hadir: 0, Alfa: 0 };
     rowsDedosan.forEach(r => { if (statDedosan[r.status] !== undefined) statDedosan[r.status]++; });
 
