@@ -55,6 +55,9 @@
       <button class="nav-item" data-page="wagroup" onclick="navigateTo('wagroup')">
         <span class="nav-icon">💬</span><span class="nav-label">Cek Grup WA</span>
       </button>
+      <button class="nav-item" data-page="kalender" onclick="navigateTo('kalender')">
+        <span class="nav-icon">📅</span><span class="nav-label">Kalender Kegiatan</span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="connection-status" id="connectionStatus">
@@ -1104,6 +1107,54 @@
               <tbody id="waTanpaNomorTableBody"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ HALAMAN KALENDER KEGIATAN ═══ -->
+    <section class="page" id="page-kalender">
+      <div class="page-header">
+        <h1 class="page-title">Kalender Kegiatan</h1>
+        <p class="page-subtitle">Semua kegiatan STT Panca Kerti dalam tampilan kalender</p>
+      </div>
+
+      <div class="card">
+        <!-- Header kalender: navigasi bulan -->
+        <div class="kal-header">
+          <button class="kal-nav-btn" onclick="kalPrevBulan()">&#8249;</button>
+          <div class="kal-title" id="kalJudulBulan">Juni 2026</div>
+          <button class="kal-nav-btn" onclick="kalNextBulan()">&#8250;</button>
+        </div>
+
+        <!-- Grid hari -->
+        <div class="kal-grid-header">
+          <span>Sen</span><span>Sel</span><span>Rab</span>
+          <span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span>
+        </div>
+        <div class="kal-grid" id="kalGrid"></div>
+
+        <!-- Info tanggal yang diklik -->
+        <div class="kal-selected-info" id="kalSelectedInfo">
+          <div class="kal-selected-tanggal" id="kalSelectedTanggal">—</div>
+          <div id="kalSelectedEvents" class="kal-event-list-detail"></div>
+        </div>
+      </div>
+
+      <!-- Daftar kegiatan bulan ini -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title" id="kalListJudul">Kegiatan Bulan Ini</h2>
+          <button class="btn-secondary-sm" onclick="loadKalender()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Tanggal</th><th>Kegiatan</th><th>Tempat</th><th>Hadir</th><th>Alfa</th></tr>
+            </thead>
+            <tbody id="kalListBody">
+              <tr><td colspan="5" class="empty-row">Memuat data...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>

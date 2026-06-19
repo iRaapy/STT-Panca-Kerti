@@ -1234,3 +1234,154 @@ select.form-input { cursor: pointer; }
   border-radius: 6px;
   color: var(--muted);
 }
+
+/* ─── KALENDER KEGIATAN ─────────────────────────────────────── */
+.kal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.kal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: .01em;
+}
+.kal-nav-btn {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  width: 34px; height: 34px;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--navy);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), border-color var(--transition);
+}
+.kal-nav-btn:hover { background: var(--bg); border-color: var(--gold); }
+
+.kal-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 8px 12px 0;
+  text-align: center;
+}
+.kal-grid-header span {
+  font-size: .73rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 6px 0;
+}
+
+.kal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  padding: 6px 12px 12px;
+}
+.kal-cell {
+  min-height: 52px;
+  border-radius: 9px;
+  padding: 5px 4px 4px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: background var(--transition);
+}
+.kal-cell:hover { background: var(--bg); }
+.kal-cell.lain-bulan { opacity: .35; cursor: default; }
+.kal-cell.lain-bulan:hover { background: transparent; }
+.kal-cell.hari-ini .kal-day-num {
+  background: var(--navy);
+  color: #fff;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.kal-cell.dipilih { background: #EEF2FF; }
+.kal-cell.dipilih .kal-day-num {
+  background: var(--gold);
+  color: #fff;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.kal-day-num {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text);
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+}
+.kal-dots {
+  display: flex;
+  gap: 3px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.kal-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+}
+.kal-dot.alfa { background: var(--red); }
+.kal-dot.hadir { background: #2F855A; }
+
+.kal-selected-info {
+  border-top: 1px solid var(--border);
+  padding: 14px 20px;
+  min-height: 60px;
+}
+.kal-selected-tanggal {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+.kal-event-list-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.kal-event-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: .83rem;
+}
+.kal-event-chip .chip-kategori {
+  font-weight: 700;
+  color: var(--navy);
+}
+.kal-event-chip .chip-tempat {
+  color: var(--muted);
+  font-size: .78rem;
+}
+.kal-event-chip .chip-stats {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.chip-stat { font-size: .75rem; font-weight: 600; padding: 2px 7px; border-radius: 10px; }
+.chip-stat.hadir { background: #F0FFF4; color: #2F855A; }
+.chip-stat.alfa  { background: var(--red-bg); color: var(--red); }
+
+.kal-empty { font-size: .83rem; color: var(--muted); font-style: italic; }
+
+@media (max-width: 600px) {
+  .kal-cell { min-height: 42px; }
+  .kal-day-num { font-size: .78rem; width: 22px; height: 22px; }
+  .kal-dot { width: 5px; height: 5px; }
+}

@@ -49,6 +49,7 @@ function navigateTo(page) {
   if (page === "qr")        loadDaftarSesiQR();
   if (page === "event")     { kembaliKeListEvent(); loadDaftarEvent(); }
   if (page === "wagroup")   loadDatabaseNomorWA();
+  if (page === "kalender")  loadKalender();
   closeSidebar();
 }
 
@@ -1866,4 +1867,191 @@ function exportBelumWA() {
     "No. HP" : a.kontak
   }));
   downloadExcel(rows, "Belum_Gabung_Grup_WA");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KALENDER KEGIATAN
+// ═══════════════════════════════════════════════════════════════
+
+// State kalender
+let kalBulan     = new Date().getMonth();  // 0-11
+let kalTahun     = new Date().getFullYear();
+let kalAllData   = [];   // semua kegiatan dari getDaftarKegiatan()
+let kalTerpilih  = null; // tanggal yang sedang diklik (string YYYY-MM-DD)
+
+const NAMA_BULAN = ["Januari","Februari","Maret","April","Mei","Juni",
+                    "Juli","Agustus","September","Oktober","November","Desember"];
+const NAMA_HARI  = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+
+// Muat data kegiatan dari backend, lalu render kalender
+async function loadKalender() {
+  try {
+    const result = await fetchAPI("getDaftarKegiatan");
+    kalAllData = result.data || [];
+  } catch (e) {
+    kalAllData = [];
+  }
+  renderKalender();
+  renderListBulan();
+}
+
+function kalPrevBulan() {
+  kalBulan--;
+  if (kalBulan < 0) { kalBulan = 11; kalTahun--; }
+  kalTerpilih = null;
+  renderKalender();
+  renderListBulan();
+}
+
+function kalNextBulan() {
+  kalBulan++;
+  if (kalBulan > 11) { kalBulan = 0; kalTahun++; }
+  kalTerpilih = null;
+  renderKalender();
+  renderListBulan();
+}
+
+// Buat peta tanggal → array kegiatan dari kalAllData
+function kalBuatPeta(bulan, tahun) {
+  const peta = {};
+  kalAllData.forEach(k => {
+    if (!k.tanggal) return;
+    const [y, m] = k.tanggal.split("-").map(Number);
+    if (y === tahun && m === bulan + 1) {
+      if (!peta[k.tanggal]) peta[k.tanggal] = [];
+      peta[k.tanggal].push(k);
+    }
+  });
+  return peta;
+}
+
+function renderKalender() {
+  document.getElementById("kalJudulBulan").textContent =
+    NAMA_BULAN[kalBulan] + " " + kalTahun;
+
+  const peta   = kalBuatPeta(kalBulan, kalTahun);
+  const grid   = document.getElementById("kalGrid");
+  const hari1  = new Date(kalTahun, kalBulan, 1).getDay(); // 0=Minggu
+  const awal   = (hari1 + 6) % 7; // konversi ke Senin=0
+  const harini = new Date().toISOString().split("T")[0];
+
+  // Total sel = hari di bulan ini + padding awal + padding akhir (kelipatan 7)
+  const totalHariBulan = new Date(kalTahun, kalBulan + 1, 0).getDate();
+  const totalSel = Math.ceil((awal + totalHariBulan) / 7) * 7;
+
+  let html = "";
+  for (let i = 0; i < totalSel; i++) {
+    const hariKe = i - awal + 1;
+    const lain   = hariKe < 1 || hariKe > totalHariBulan;
+    let tanggalStr = "";
+
+    if (!lain) {
+      const mm = String(kalBulan + 1).padStart(2, "0");
+      const dd = String(hariKe).padStart(2, "0");
+      tanggalStr = `${kalTahun}-${mm}-${dd}`;
+    }
+
+    const events   = tanggalStr ? (peta[tanggalStr] || []) : [];
+    const isHarini = tanggalStr === harini;
+    const isPilih  = tanggalStr === kalTerpilih;
+    const tampil   = lain ? (hariKe < 1
+      ? new Date(kalTahun, kalBulan, hariKe).getDate()
+      : hariKe - totalHariBulan) : hariKe;
+
+    const cls = [
+      "kal-cell",
+      lain ? "lain-bulan" : "",
+      isHarini && !isPilih ? "hari-ini" : "",
+      isPilih ? "dipilih" : ""
+    ].filter(Boolean).join(" ");
+
+    const onclick = !lain ? `onclick="kalPilihTanggal('${tanggalStr}')"` : "";
+
+    // Dot: max 3 titik (biru = kegiatan ada)
+    const dots = events.slice(0, 3).map(() =>
+      `<span class="kal-dot"></span>`).join("");
+
+    html += `
+      <div class="${cls}" ${onclick}>
+        <div class="kal-day-num">${tampil}</div>
+        ${events.length ? `<div class="kal-dots">${dots}</div>` : ""}
+      </div>`;
+  }
+
+  grid.innerHTML = html;
+
+  // Tampilkan info tanggal yang sedang terpilih (atau hari ini)
+  const terpilihAktif = kalTerpilih || harini;
+  const eventsTerpilih = peta[terpilihAktif] || [];
+  tampilkanDetailTanggal(terpilihAktif, eventsTerpilih);
+}
+
+function kalPilihTanggal(tgl) {
+  kalTerpilih = tgl;
+  renderKalender();
+}
+
+function tampilkanDetailTanggal(tgl, events) {
+  const infoTgl   = document.getElementById("kalSelectedTanggal");
+  const infoEvts  = document.getElementById("kalSelectedEvents");
+
+  if (!tgl) { infoTgl.textContent = "—"; infoEvts.innerHTML = ""; return; }
+
+  const d = new Date(tgl + "T00:00:00");
+  infoTgl.textContent = NAMA_HARI[d.getDay()] + ", " + d.getDate() + " " +
+    NAMA_BULAN[d.getMonth()] + " " + d.getFullYear();
+
+  if (!events.length) {
+    infoEvts.innerHTML = `<div class="kal-empty">Tidak ada kegiatan pada tanggal ini.</div>`;
+    return;
+  }
+
+  infoEvts.innerHTML = events.map(k => `
+    <div class="kal-event-chip">
+      <div>
+        <div class="chip-kategori">${k.kategori || "—"}</div>
+        <div class="chip-tempat">${k.tempat || "—"}</div>
+      </div>
+      <div class="chip-stats">
+        <span class="chip-stat hadir">✅ ${k.hadir}</span>
+        <span class="chip-stat alfa">❌ ${k.alfa}</span>
+      </div>
+    </div>
+  `).join("");
+}
+
+// Tabel daftar kegiatan di bulan yang sedang dilihat
+function renderListBulan() {
+  const tbody = document.getElementById("kalListBody");
+  const judul = document.getElementById("kalListJudul");
+
+  judul.textContent = "Kegiatan " + NAMA_BULAN[kalBulan] + " " + kalTahun;
+
+  const bulanRows = kalAllData.filter(k => {
+    if (!k.tanggal) return false;
+    const [y, m] = k.tanggal.split("-").map(Number);
+    return y === kalTahun && m === kalBulan + 1;
+  });
+
+  if (!bulanRows.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Tidak ada kegiatan bulan ini.</td></tr>`;
+    return;
+  }
+
+  // Urutkan per tanggal ascending
+  bulanRows.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+
+  tbody.innerHTML = bulanRows.map(k => {
+    const d = new Date(k.tanggal + "T00:00:00");
+    const tglLabel = d.getDate() + " " + NAMA_BULAN[d.getMonth()];
+    return `
+      <tr style="cursor:pointer" onclick="kalPilihTanggal('${k.tanggal}'); document.getElementById('kalGrid').scrollIntoView({behavior:'smooth'})">
+        <td>${tglLabel}</td>
+        <td><strong>${k.kategori || "—"}</strong></td>
+        <td>${k.tempat || "—"}</td>
+        <td><span class="chip-stat hadir">${k.hadir}</span></td>
+        <td><span class="chip-stat alfa">${k.alfa}</span></td>
+      </tr>
+    `;
+  }).join("");
 }
