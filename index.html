@@ -634,11 +634,22 @@
             <h2 class="card-title">💰 Dedosan</h2>
           </div>
           <div class="form-body">
+            <!-- Dedosan tertunggak (saat ini) -->
+            <div class="dedosan-label-small">Dedosan Saat Ini</div>
             <div id="rekapDedosanBox" class="dedosan-box">
               <div class="dedosan-rumus" id="rekapDedosanRumus">—</div>
               <div class="dedosan-nominal" id="rekapDedosanNominal">Rp 0</div>
             </div>
+            <!-- Bulan mulai dihitung -->
+            <div id="rekapDedosanBulanMulaiWrap" class="hidden dedosan-bulan-mulai">
+              📅 Dihitung sejak: <strong id="rekapDedosanBulanMulai">—</strong>
+            </div>
             <div id="rekapDedosanKet" class="dedosan-ket"></div>
+            <!-- Total dedosan yang sudah dibayar -->
+            <div id="rekapDedosanSudahBayarBox" class="hidden dedosan-sudah-bayar-box">
+              <span class="dedosan-sudah-bayar-label">✅ Total Sudah Dibayar</span>
+              <span class="dedosan-sudah-bayar-nominal" id="rekapDedosanSudahBayar">Rp 0</span>
+            </div>
             <div id="rekapDedosanBtnWrap" class="hidden" style="margin-top:14px;">
               <button class="btn-primary w-full" id="rekapBayarBtn" onclick="konfirmasiSudahBayar()">✅ Tandai Sudah Bayar</button>
             </div>

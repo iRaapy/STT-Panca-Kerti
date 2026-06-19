@@ -610,6 +610,9 @@ async function tampilkanRekap() {
     const stat = { Hadir: 0, Izin: 0, Sakit: 0, Alfa: 0 };
     rows.forEach(r => { if (stat[r.status] !== undefined) stat[r.status]++; });
 
+    // Ambil SEMUA data absensi tanpa filter tanggal (untuk hitung dedosan sudah bayar)
+    const allRows = result.data || [];
+
     // Khusus dedosan: kalau anggota sudah pernah bayar, hanya hitung record
     // SETELAH tanggal lunas terakhir (dedosan sebelumnya dianggap lunas)
     const rowsDedosan = lunasSampaiTanggal
@@ -645,6 +648,36 @@ async function tampilkanRekap() {
         : `✅ Lunas — sudah bayar sampai tanggal ${formatTanggal(lunasSampaiTanggal)}. Belum ada dedosan baru sejak pembayaran terakhir.`;
     }
 
+    // ── Hitung total dedosan yang sudah dibayar ──────────────────────────────
+    // Ambil semua absensi SEBELUM lunasSampaiTanggal (yang sudah dilunasi)
+    let dedosanSudahBayar = 0;
+    let bulanMulaiDihitung = null;
+
+    if (lunasSampaiTanggal) {
+      const rowsSudahBayar = allRows.filter(r => r.tanggal <= lunasSampaiTanggal);
+      const statSudahBayar = { Hadir: 0, Alfa: 0 };
+      rowsSudahBayar.forEach(r => { if (statSudahBayar[r.status] !== undefined) statSudahBayar[r.status]++; });
+
+      if (statusAnggota === "Aktif" || statusAnggota === "Pengurus") {
+        dedosanSudahBayar = statSudahBayar.Alfa * 5000;
+      } else if (statusAnggota === "Nonaktif") {
+        dedosanSudahBayar = Math.max(0, 50000 - (statSudahBayar.Hadir * 2000));
+      } else if (statusAnggota === "Pengampel") {
+        dedosanSudahBayar = Math.max(0, 80000 - (statSudahBayar.Hadir * 2000));
+      }
+    }
+
+    // Tentukan bulan mulai dihitung (bulan pertama absensi yang belum lunas)
+    const rowsBelumLunas = lunasSampaiTanggal
+      ? allRows.filter(r => r.tanggal > lunasSampaiTanggal)
+      : allRows;
+    if (rowsBelumLunas.length > 0) {
+      const tanggalTerlama = rowsBelumLunas.map(r => r.tanggal).sort()[0];
+      const [thn, bln] = tanggalTerlama.split("-");
+      const namaBulan = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"];
+      bulanMulaiDihitung = `${namaBulan[parseInt(bln,10) - 1]} ${thn}`;
+    }
+
     // Tampilkan hasil
     document.getElementById("rekapPlaceholder").classList.add("hidden");
     document.getElementById("rekapHasil").classList.remove("hidden");
@@ -669,6 +702,26 @@ async function tampilkanRekap() {
 
     // Tombol "Tandai Sudah Bayar" hanya muncul kalau masih ada dedosan tertunggak
     document.getElementById("rekapDedosanBtnWrap").classList.toggle("hidden", dedosan <= 0);
+
+    // Tampilkan info dedosan sudah bayar & bulan mulai dihitung
+    const sudahBayarBox = document.getElementById("rekapDedosanSudahBayarBox");
+    const elSudahBayar  = document.getElementById("rekapDedosanSudahBayar");
+    const elBulanMulai  = document.getElementById("rekapDedosanBulanMulai");
+    const elBulanMulaiWrap = document.getElementById("rekapDedosanBulanMulaiWrap");
+
+    if (lunasSampaiTanggal) {
+      sudahBayarBox.classList.remove("hidden");
+      elSudahBayar.textContent = formatRupiah(dedosanSudahBayar);
+    } else {
+      sudahBayarBox.classList.add("hidden");
+    }
+
+    if (bulanMulaiDihitung) {
+      elBulanMulaiWrap.classList.remove("hidden");
+      elBulanMulai.textContent = bulanMulaiDihitung;
+    } else {
+      elBulanMulaiWrap.classList.add("hidden");
+    }
 
     document.getElementById("rekapTotalBadge").textContent = rows.length + " data";
 
