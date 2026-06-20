@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ukuran Baju — STT Panca Kerti</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <style>
+    :root {
+      --navy: #1E2B4A;
+      --gold: #C9A84C;
+      --bg: #F5F7FA;
+      --surface: #FFFFFF;
+      --text: #2D3748;
+      --muted: #718096;
+      --border: #E2E8F0;
+      --green: #2F855A;
+      --green-bg: #F0FFF4;
+      --red: #C53030;
+      --red-bg: #FFF5F5;
+      --radius: 14px;
+      --shadow: 0 4px 20px rgba(0,0,0,.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(160deg, var(--navy) 0%, #2A3B62 40%, var(--bg) 40%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px 40px;
+      color: var(--text);
+    }
+    .wrap { width: 100%; max-width: 440px; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      color: #fff;
+      margin-bottom: 20px;
+      padding-top: 10px;
+    }
+    .header img {
+      width: 64px; height: 64px;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 14px;
+      padding: 6px;
+      margin-bottom: 10px;
+    }
+    .header h1 { font-size: 1.15rem; font-weight: 700; }
+    .header p  { font-size: .8rem; opacity: .8; margin-top: 2px; }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 16px;
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block;
+      font-size: .82rem; font-weight: 600;
+      color: var(--text); margin-bottom: 6px;
+    }
+    .form-label span { color: var(--red); }
+    .form-input {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--border); border-radius: 9px;
+      font-family: inherit; font-size: .92rem; color: var(--text);
+      background: var(--bg);
+    }
+    .form-input:focus { outline: none; border-color: var(--gold); background: #fff; }
+    .form-hint { font-size: .75rem; color: var(--muted); margin-top: 5px; }
+
+    /* Pilihan ukuran */
+    .ukuran-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .ukuran-option {
+      border: 2px solid var(--border);
+      border-radius: 9px;
+      padding: 12px 4px;
+      text-align: center;
+      cursor: pointer;
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--muted);
+      background: var(--bg);
+      transition: all .15s ease;
+      user-select: none;
+    }
+    .ukuran-option:hover { border-color: var(--navy); color: var(--navy); }
+    .ukuran-option.selected {
+      border-color: var(--navy);
+      background: var(--navy);
+      color: #fff;
+    }
+    .ukuran-option .sub {
+      font-size: .62rem;
+      font-weight: 400;
+      opacity: .7;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* Tabel ukuran */
+    .size-guide {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      overflow: hidden;
+      font-size: .78rem;
+    }
+    .size-guide table { width: 100%; border-collapse: collapse; }
+    .size-guide th {
+      background: var(--navy);
+      color: #fff;
+      padding: 7px 8px;
+      text-align: center;
+      font-size: .72rem;
+    }
+    .size-guide td {
+      padding: 6px 8px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+    }
+    .size-guide tr:nth-child(even) td { background: var(--bg); }
+
+    /* Tombol */
+    .btn-primary {
+      width: 100%; padding: 15px;
+      background: var(--navy); color: #fff;
+      border: none; border-radius: 10px;
+      font-family: inherit; font-size: .95rem; font-weight: 700;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Alert */
+    .alert {
+      padding: 12px 14px; border-radius: 9px;
+      font-size: .85rem; margin-bottom: 14px;
+    }
+    .alert.error   { background: var(--red-bg);   color: var(--red);   border: 1px solid #FEB2B2; }
+    .alert.success { background: var(--green-bg);  color: var(--green); border: 1px solid #9AE6B4; }
+    .hidden { display: none !important; }
+
+    /* State box */
+    .state-box { text-align: center; padding: 28px 10px; }
+    .state-icon  { font-size: 3rem; margin-bottom: 12px; }
+    .state-title { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .state-desc  { font-size: .86rem; color: var(--muted); line-height: 1.5; }
+
+    /* Sudah isi badge */
+    .sudah-isi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #EBF8FF;
+      border: 1.5px solid #90CDF4;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: .85rem;
+      color: #2B6CB0;
+      margin-bottom: 16px;
+      width: 100%;
+    }
+    .sudah-isi-badge strong { font-size: 1rem; }
+
+    .footer-note { text-align: center; font-size:.72rem; color:rgba(255,255,255,.6); margin-top: 10px; }
+
+    datalist { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="header">
+      <img src="logo.png" alt="Logo" onerror="this.style.display='none'" />
+      <h1>STT Panca Kerti</h1>
+      <p>Pendaftaran Ukuran Baju Anggota</p>
+    </div>
+
+    <!-- Loading -->
+    <div class="card" id="loadingState">
+      <div class="state-box">
+        <div class="state-icon">⏳</div>
+        <div class="state-title">Memuat data...</div>
+        <div class="state-desc">Mohon tunggu sebentar.</div>
+      </div>
+    </div>
+
+    <!-- Form Pengisian -->
+    <div class="card hidden" id="formState">
+      <p class="card-title">📋 Isi Ukuran Bajumu</p>
+
+      <div id="sudahIsiInfo" class="sudah-isi-badge hidden">
+        <span>👕</span>
+        <span>Ukuran tersimpan: <strong id="sudahIsiUkuran">—</strong></span>
+        <span style="margin-left:auto;font-size:.75rem;color:var(--muted)" id="sudahIsiTgl"></span>
+      </div>
+
+      <div id="formAlert" class="alert hidden"></div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Lengkap <span>*</span></label>
+        <input type="text" class="form-input" id="inputNama"
+          list="listNama" placeholder="Ketik atau pilih nama kamu"
+          autocomplete="off" oninput="onNamaInput()" />
+        <datalist id="listNama"></datalist>
+        <p class="form-hint">Pilih dari daftar nama anggota terdaftar.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ukuran Baju <span>*</span></label>
+        <div class="ukuran-grid" id="ukuranOptions">
+          <div class="ukuran-option" data-val="XS" onclick="pilihUkuran(this)">
+            XS<span class="sub">Extra Small</span>
+          </div>
+          <div class="ukuran-option" data-val="S" onclick="pilihUkuran(this)">
+            S<span class="sub">Small</span>
+          </div>
+          <div class="ukuran-option" data-val="M" onclick="pilihUkuran(this)">
+            M<span class="sub">Medium</span>
+          </div>
+          <div class="ukuran-option" data-val="L" onclick="pilihUkuran(this)">
+            L<span class="sub">Large</span>
+          </div>
+          <div class="ukuran-option" data-val="XL" onclick="pilihUkuran(this)">
+            XL<span class="sub">Extra Large</span>
+          </div>
+          <div class="ukuran-option" data-val="XXL" onclick="pilihUkuran(this)">
+            XXL<span class="sub">2XL</span>
+          </div>
+          <div class="ukuran-option" data-val="XXXL" onclick="pilihUkuran(this)">
+            XXXL<span class="sub">3XL</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="submitBtn" onclick="submitUkuran()">
+        Simpan Ukuran Baju
+      </button>
+    </div>
+
+    <!-- Panduan Ukuran -->
+    <div class="card hidden" id="panduanState">
+      <p class="card-title">📏 Panduan Ukuran</p>
+      <div class="size-guide">
+        <table>
+          <thead>
+            <tr><th>Ukuran</th><th>Lingkar Dada (cm)</th><th>Panjang Baju (cm)</th><th>Berat Badan (kg)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>XS</td><td>84–88</td><td>66</td><td>45–55</td></tr>
+            <tr><td>S</td><td>88–92</td><td>68</td><td>55–65</td></tr>
+            <tr><td>M</td><td>92–96</td><td>70</td><td>65–70</td></tr>
+            <tr><td>L</td><td>96–100</td><td>72</td><td>70–80</td></tr>
+            <tr><td>XL</td><td>100–106</td><td>74</td><td>80–90</td></tr>
+            <tr><td>XXL</td><td>106–112</td><td>76</td><td>90–100</td></tr>
+            <tr><td>XXXL</td><td>112–120</td><td>78</td><td>100–115</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sukses -->
+    <div class="card hidden" id="successState">
+      <div class="state-box">
+        <div class="state-icon">✅</div>
+        <div class="state-title">Tersimpan!</div>
+        <div class="state-desc" id="successMsg">Ukuran baju kamu berhasil disimpan.</div>
+        <button class="btn-primary" style="margin-top:20px;max-width:200px;" onclick="isiLagi()">
+          Isi Ulang / Ganti Ukuran
+        </button>
+      </div>
+    </div>
+
+    <div class="footer-note">© STT Panca Kerti — Sistem Informasi</div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzJTOrM4sBnCNDAB0e7iTuCPBmxn4Q4yAgGzfWUF8zDuFqqYsyGGEZ_DY3cTY5RV1K9/exec";
+
+    let ukuranTerpilih = "";
+    let namaTerpilihSebelumnya = "";
+
+    async function fetchAPI(action, params = {}) {
+      const url = new URL(API_URL);
+      url.searchParams.set("action", action);
+      url.searchParams.set("payload", JSON.stringify(params));
+      Object.keys(params).forEach(k => {
+        if (typeof params[k] === "string") url.searchParams.set(k, params[k]);
+      });
+      const res  = await fetch(url);
+      const json = await res.json();
+      if (json.status !== "success") throw new Error(json.message || "Gagal.");
+      return json;
+    }
+
+    async function writeAPI(action, data) {
+      const url = new URL(API_URL);
+      url.searchParams.set("action", action);
+      url.searchParams.set("payload", JSON.stringify(data));
+      const res  = await fetch(url);
+      const json = await res.json();
+      if (json.status !== "success") throw new Error(json.message || "Gagal menyimpan.");
+      return json;
+    }
+
+    function showState(...ids) {
+      ["loadingState","formState","panduanState","successState"].forEach(id =>
+        document.getElementById(id).classList.toggle("hidden", !ids.includes(id)));
+    }
+
+    function showAlert(type, msg) {
+      const el = document.getElementById("formAlert");
+      el.textContent  = msg;
+      el.className    = "alert " + type;
+      el.classList.remove("hidden");
+    }
+    function hideAlert() {
+      document.getElementById("formAlert").classList.add("hidden");
+    }
+
+    function pilihUkuran(el) {
+      document.querySelectorAll(".ukuran-option").forEach(o => o.classList.remove("selected"));
+      el.classList.add("selected");
+      ukuranTerpilih = el.dataset.val;
+      hideAlert();
+    }
+
+    // Kalau nama dipilih, cek apakah sudah pernah isi ukuran sebelumnya
+    async function onNamaInput() {
+      const nama = document.getElementById("inputNama").value.trim();
+      if (!nama || nama === namaTerpilihSebelumnya) return;
+      namaTerpilihSebelumnya = nama;
+
+      try {
+        const res = await fetchAPI("getUkuranByNama", { nama });
+        const info = document.getElementById("sudahIsiInfo");
+        if (res.data) {
+          document.getElementById("sudahIsiUkuran").textContent = res.data.ukuran;
+          document.getElementById("sudahIsiTgl").textContent    = "Diisi: " + (res.data.timestamp || "");
+          info.classList.remove("hidden");
+          // Auto-pilih ukuran yang sudah tersimpan
+          const opt = document.querySelector(`.ukuran-option[data-val="${res.data.ukuran}"]`);
+          if (opt) pilihUkuran(opt);
+        } else {
+          info.classList.add("hidden");
+        }
+      } catch (_) {
+        document.getElementById("sudahIsiInfo").classList.add("hidden");
+      }
+    }
+
+    async function submitUkuran() {
+      const nama = document.getElementById("inputNama").value.trim();
+      if (!nama)          { showAlert("error", "Nama wajib diisi."); return; }
+      if (!ukuranTerpilih){ showAlert("error", "Pilih ukuran baju kamu."); return; }
+
+      const btn = document.getElementById("submitBtn");
+      btn.disabled    = true;
+      btn.textContent = "Menyimpan...";
+
+      try {
+        const result = await writeAPI("simpanUkuranBaju", { nama, ukuran: ukuranTerpilih });
+        document.getElementById("successMsg").textContent =
+          result.updated
+            ? `Ukuran baju kamu diperbarui menjadi ${ukuranTerpilih}. Terima kasih, ${nama}!`
+            : `Ukuran baju ${ukuranTerpilih} untuk ${nama} berhasil disimpan. Terima kasih!`;
+        showState("formState", "panduanState", "successState");
+        // Sembunyikan form saat sukses, tampilkan sukses
+        document.getElementById("formState").classList.add("hidden");
+        document.getElementById("successState").classList.remove("hidden");
+      } catch (err) {
+        showAlert("error", err.message);
+        btn.disabled    = false;
+        btn.textContent = "Simpan Ukuran Baju";
+      }
+    }
+
+    function isiLagi() {
+      // Reset form
+      document.getElementById("inputNama").value = "";
+      document.querySelectorAll(".ukuran-option").forEach(o => o.classList.remove("selected"));
+      document.getElementById("sudahIsiInfo").classList.add("hidden");
+      ukuranTerpilih             = "";
+      namaTerpilihSebelumnya     = "";
+      const btn = document.getElementById("submitBtn");
+      btn.disabled    = false;
+      btn.textContent = "Simpan Ukuran Baju";
+      showState("formState", "panduanState");
+    }
+
+    async function init() {
+      try {
+        const result = await fetchAPI("getAnggota");
+        const datalist = document.getElementById("listNama");
+        (result.data || []).forEach(a => {
+          const opt   = document.createElement("option");
+          opt.value   = a.nama;
+          datalist.appendChild(opt);
+        });
+        showState("formState", "panduanState");
+      } catch (err) {
+        showState("formState", "panduanState");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -15,6 +15,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -223,6 +224,7 @@
             <button class="btn-export" onclick="exportAnggotaExcel()">⬇ Excel</button>
             <button class="btn-export" onclick="exportAnggotaPDF()">⬇ PDF</button>
             <button class="btn-export" onclick="cetakHalaman('page-anggota')">🖨 Cetak</button>
+            <button class="btn-primary" style="font-size:.82rem;padding:6px 14px;" onclick="navigateTo('ukuran')">👕 Ukuran Baju</button>
           </div>
         </div>
         <!-- Filter -->
@@ -1107,6 +1109,70 @@
               <tbody id="waTanpaNomorTableBody"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ HALAMAN UKURAN BAJU ═══ -->
+    <section class="page" id="page-ukuran">
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="btn-ghost" style="padding:6px 12px;font-size:.85rem;" onclick="navigateTo('anggota')">← Kembali</button>
+          <div>
+            <h1 class="page-title">Ukuran Baju Anggota</h1>
+            <p class="page-subtitle">Pantau dan kelola data ukuran baju seluruh anggota</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code & Link Pengisian -->
+      <div class="card">
+        <div class="card-header"><h2 class="card-title">🔗 Link & QR Pengisian Ukuran Baju</h2></div>
+        <div class="form-body">
+          <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px;">
+            Bagikan QR code atau link berikut kepada anggota agar mereka bisa mengisi ukuran baju masing-masing dari HP.
+          </p>
+          <div class="ukuran-qr-wrap">
+            <div id="ukuranQRCode" class="ukuran-qr-box"></div>
+            <div class="ukuran-link-box">
+              <label class="form-label">Link Pengisian</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" class="form-input" id="ukuranLinkInput" readonly style="font-size:.78rem;" />
+                <button class="btn-secondary-sm" onclick="salinLinkUkuran()">Salin</button>
+              </div>
+              <p class="form-hint" style="margin-top:6px;">Anggota bisa scan QR atau buka link di atas, lalu pilih nama dan ukuran baju mereka.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress & Ringkasan -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title">📊 Ringkasan Ukuran</h2>
+          <button class="btn-secondary-sm" onclick="loadUkuranBaju()">↻ Refresh</button>
+        </div>
+        <div id="ukuranStats" class="ukuran-stats-grid"></div>
+      </div>
+
+      <!-- Tabel lengkap -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title">Daftar Ukuran Baju</h2>
+          <div style="display:flex;gap:8px;">
+            <span class="badge" id="ukuranBadge">—</span>
+            <button class="btn-export" onclick="exportUkuranExcel()">⬇ Excel</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>No</th><th>Nama</th><th>Jabatan</th><th>Status</th><th>Ukuran Baju</th><th>Terakhir Diisi</th></tr>
+            </thead>
+            <tbody id="ukuranTableBody">
+              <tr><td colspan="6" class="empty-row">Memuat data...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>

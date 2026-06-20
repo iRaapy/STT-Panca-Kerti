@@ -50,6 +50,7 @@ function navigateTo(page) {
   if (page === "event")     { kembaliKeListEvent(); loadDaftarEvent(); }
   if (page === "wagroup")   loadDatabaseNomorWA();
   if (page === "kalender")  loadKalender();
+  if (page === "ukuran")    initUkuranBaju();
   closeSidebar();
 }
 
@@ -2054,4 +2055,152 @@ function renderListBulan() {
       </tr>
     `;
   }).join("");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UKURAN BAJU ANGGOTA
+// ═══════════════════════════════════════════════════════════════
+
+const UKURAN_BAJU_URL_PATH = "ukuran.html"; // nama file halaman pengisian
+
+function initUkuranBaju() {
+  // Bangun link pengisian berdasarkan URL halaman ini
+  const baseURL = window.location.href.replace(/\/[^/]*$/, "/");
+  const linkPengisian = baseURL + UKURAN_BAJU_URL_PATH;
+
+  document.getElementById("ukuranLinkInput").value = linkPengisian;
+
+  // Render QR code pakai library QRCode.js (CDN)
+  const qrBox = document.getElementById("ukuranQRCode");
+  qrBox.innerHTML = "";
+  if (typeof QRCode !== "undefined") {
+    new QRCode(qrBox, {
+      text  : linkPengisian,
+      width : 136,
+      height: 136,
+      colorDark  : "#1E2B4A",
+      colorLight : "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } else {
+    // Fallback: QR via Google Charts API
+    const img = document.createElement("img");
+    img.src = "https://chart.googleapis.com/chart?cht=qr&chs=136x136&chl=" +
+              encodeURIComponent(linkPengisian) + "&chco=1E2B4A";
+    img.alt = "QR Code";
+    img.style.cssText = "width:136px;height:136px;";
+    qrBox.appendChild(img);
+  }
+
+  loadUkuranBaju();
+}
+
+function salinLinkUkuran() {
+  const input = document.getElementById("ukuranLinkInput");
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = event.target;
+    btn.textContent = "✅ Disalin!";
+    setTimeout(() => { btn.textContent = "Salin"; }, 2000);
+  }).catch(() => {
+    input.select();
+    document.execCommand("copy");
+  });
+}
+
+async function loadUkuranBaju() {
+  try {
+    // Ambil data ukuran dan daftar anggota secara paralel
+    const [resUkuran, resAnggota] = await Promise.all([
+      fetchAPI("getUkuranBaju"),
+      Promise.resolve({ data: daftarAnggota })
+    ]);
+
+    const dataUkuran  = resUkuran.data || [];
+    const dataAnggota = daftarAnggota || [];
+
+    // Map nama → ukuran untuk lookup cepat
+    const mapUkuran = {};
+    dataUkuran.forEach(u => { mapUkuran[u.nama.trim().toLowerCase()] = u; });
+
+    // Gabungkan: semua anggota + status ukurannya
+    const gabungan = dataAnggota.map(a => ({
+      nama     : a.nama,
+      jabatan  : a.jabatan || "Anggota",
+      status   : a.statusKeanggotaan || "Aktif",
+      ukuran   : mapUkuran[a.nama.trim().toLowerCase()]?.ukuran || null,
+      timestamp: mapUkuran[a.nama.trim().toLowerCase()]?.timestamp || null
+    }));
+
+    renderTabelUkuran(gabungan);
+    renderStatsUkuran(gabungan);
+
+    const sudahIsi = gabungan.filter(g => g.ukuran).length;
+    document.getElementById("ukuranBadge").textContent =
+      sudahIsi + " / " + gabungan.length + " sudah isi";
+
+  } catch (err) {
+    document.getElementById("ukuranTableBody").innerHTML =
+      `<tr><td colspan="6" class="empty-row">❌ ${err.message}</td></tr>`;
+  }
+}
+
+function renderTabelUkuran(data) {
+  const tbody = document.getElementById("ukuranTableBody");
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Belum ada data anggota.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map((r, i) => {
+    const ukuranCell = r.ukuran
+      ? `<span class="ukuran-badge-pill">${r.ukuran}</span>`
+      : `<span class="ukuran-badge-pill belum">Belum isi</span>`;
+    const tglCell = r.timestamp || "—";
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td><strong>${r.nama}</strong></td>
+        <td>${r.jabatan}</td>
+        <td><span class="status-badge ${(r.status||"").toLowerCase()}">${r.status}</span></td>
+        <td>${ukuranCell}</td>
+        <td style="font-size:.78rem;color:var(--muted)">${tglCell}</td>
+      </tr>`;
+  }).join("");
+}
+
+function renderStatsUkuran(data) {
+  const URUTAN = ["XS","S","M","L","XL","XXL","XXXL"];
+  const hitung = {};
+  URUTAN.forEach(u => { hitung[u] = 0; });
+  data.forEach(r => { if (r.ukuran && hitung[r.ukuran] !== undefined) hitung[r.ukuran]++; });
+
+  const belumIsi = data.filter(r => !r.ukuran).length;
+
+  const container = document.getElementById("ukuranStats");
+  container.innerHTML = URUTAN.map(u => `
+    <div class="ukuran-stat-card">
+      <div class="ukuran-stat-size">${u}</div>
+      <div class="ukuran-stat-count">${hitung[u]} orang</div>
+    </div>`).join("") + `
+    <div class="ukuran-stat-card">
+      <div class="ukuran-stat-size" style="color:var(--muted);font-size:.95rem;">❓</div>
+      <div class="ukuran-stat-count">${belumIsi} belum isi</div>
+    </div>`;
+}
+
+function exportUkuranExcel() {
+  const rows = [];
+  document.querySelectorAll("#ukuranTableBody tr").forEach(tr => {
+    const cols = tr.querySelectorAll("td");
+    if (cols.length < 5) return;
+    rows.push({
+      "No"           : cols[0].textContent.trim(),
+      "Nama"         : cols[1].textContent.trim(),
+      "Jabatan"      : cols[2].textContent.trim(),
+      "Status"       : cols[3].textContent.trim(),
+      "Ukuran Baju"  : cols[4].textContent.trim(),
+      "Terakhir Diisi": cols[5].textContent.trim()
+    });
+  });
+  downloadExcel(rows, "Ukuran_Baju_Anggota");
 }
