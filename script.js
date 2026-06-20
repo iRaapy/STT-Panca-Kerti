@@ -1647,17 +1647,18 @@ function konfirmasiHapusPanitia(id, nama) {
 }
 
 function lihatQRPanitia(nama, kodeQR) {
-  const box = document.createElement("div");
-  new QRCode(box, { text: kodeQR, width: 200, height: 200, colorDark: "#1E2B4A", colorLight: "#ffffff" });
-
   document.getElementById("modalBody").innerHTML =
     `<div style="text-align:center;">
        <div style="font-weight:700; margin-bottom:10px; color:var(--navy);">${nama}</div>
-       <div style="display:inline-block; padding:10px; background:#fff; border:2px solid var(--border); border-radius:10px;">${box.innerHTML}</div>
+       <div id="qrPanitiaModalBox" style="display:inline-block; padding:10px; background:#fff; border:2px solid var(--border); border-radius:10px;"></div>
        <div style="margin-top:10px; font-size:.78rem; color:var(--muted);">Kode: ${kodeQR}</div>
      </div>`;
   document.getElementById("modalBackdrop").classList.remove("hidden");
   document.getElementById("modalConfirmBtn").onclick = closeModal;
+
+  // Generate QR setelah elemen target benar-benar ada di DOM
+  const target = document.getElementById("qrPanitiaModalBox");
+  new QRCode(target, { text: kodeQR, width: 200, height: 200, colorDark: "#1E2B4A", colorLight: "#ffffff" });
 }
 
 // ─── Scanner Kamera untuk Scan QR Panitia ──────────────────
