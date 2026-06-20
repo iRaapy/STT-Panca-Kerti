@@ -526,6 +526,10 @@ document.getElementById("modalBackdrop").addEventListener("click", function(e) {
   if (e.target === this) closeModal();
 });
 
+document.getElementById("qrPanitiaBackdrop").addEventListener("click", function(e) {
+  if (e.target === this) closeQRPanitiaModal();
+});
+
 // ═══ REKAP ABSENSI ════════════════════════════════════════
 let rekapNamaTerakhir = "";
 
@@ -1646,19 +1650,64 @@ function konfirmasiHapusPanitia(id, nama) {
   };
 }
 
-function lihatQRPanitia(nama, kodeQR) {
-  document.getElementById("modalBody").innerHTML =
-    `<div style="text-align:center;">
-       <div style="font-weight:700; margin-bottom:10px; color:var(--navy);">${nama}</div>
-       <div id="qrPanitiaModalBox" style="display:inline-block; padding:10px; background:#fff; border:2px solid var(--border); border-radius:10px;"></div>
-       <div style="margin-top:10px; font-size:.78rem; color:var(--muted);">Kode: ${kodeQR}</div>
-     </div>`;
-  document.getElementById("modalBackdrop").classList.remove("hidden");
-  document.getElementById("modalConfirmBtn").onclick = closeModal;
+let qrPanitiaAktif = { nama: "", kode: "" };
 
-  // Generate QR setelah elemen target benar-benar ada di DOM
-  const target = document.getElementById("qrPanitiaModalBox");
-  new QRCode(target, { text: kodeQR, width: 200, height: 200, colorDark: "#1E2B4A", colorLight: "#ffffff" });
+function lihatQRPanitia(nama, kodeQR) {
+  qrPanitiaAktif = { nama, kode: kodeQR };
+
+  document.getElementById("qrPanitiaNama").textContent = nama;
+  document.getElementById("qrPanitiaKode").textContent = kodeQR;
+
+  // Pakai Google Chart API untuk generate gambar QR langsung (selalu render,
+  // tidak bergantung timing JS seperti library QRCode.js sebelumnya)
+  const qrUrl = "https://chart.googleapis.com/chart?chs=400x400&cht=qr&chl=" +
+    encodeURIComponent(kodeQR) + "&choe=UTF-8";
+  document.getElementById("qrPanitiaImg").src = qrUrl;
+
+  document.getElementById("qrPanitiaBackdrop").classList.remove("hidden");
+}
+
+function closeQRPanitiaModal() {
+  document.getElementById("qrPanitiaBackdrop").classList.add("hidden");
+}
+
+async function downloadQRPanitia() {
+  try {
+    const img = document.getElementById("qrPanitiaImg");
+    const response = await fetch(img.src);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "QR_Panitia_" + qrPanitiaAktif.nama.replace(/\s+/g, "_") + ".png";
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert("Gagal mengunduh QR: " + err.message);
+  }
+}
+
+function printQRPanitia() {
+  const w = window.open("", "_blank");
+  w.document.write(`
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>QR Panitia - ${qrPanitiaAktif.nama}</title>
+    <style>
+      body { font-family: Arial, sans-serif; text-align:center; padding:40px; color:#1E2B4A; }
+      h1 { font-size:20px; margin-bottom:4px; }
+      h2 { font-size:16px; color:#555; margin-bottom:24px; font-weight:500; }
+      img { width:280px; height:280px; }
+      .kode { margin-top:14px; font-size:13px; color:#888; }
+    </style></head><body>
+    <h1>STT Panca Kerti</h1>
+    <h2>Kartu Panitia: ${qrPanitiaAktif.nama}</h2>
+    <img src="${document.getElementById('qrPanitiaImg').src}" />
+    <div class="kode">Kode: ${qrPanitiaAktif.kode}</div>
+    <script>window.onload=()=>{window.print();}<\/script>
+    </body></html>
+  `);
+  w.document.close();
 }
 
 // ─── Scanner Kamera untuk Scan QR Panitia ──────────────────

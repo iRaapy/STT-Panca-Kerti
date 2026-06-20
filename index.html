@@ -1239,6 +1239,24 @@
     </div>
   </div>
 
+  <!-- Modal QR Panitia -->
+  <div class="modal-backdrop hidden" id="qrPanitiaBackdrop">
+    <div class="modal" style="max-width:340px;">
+      <h3 class="modal-title" id="qrPanitiaNama">—</h3>
+      <div style="text-align:center; margin: 16px 0;">
+        <div style="display:inline-block; padding:12px; background:#fff; border:2px solid var(--border); border-radius:12px;">
+          <img id="qrPanitiaImg" src="" alt="QR Panitia" width="220" height="220" style="display:block;" />
+        </div>
+        <div style="margin-top:10px; font-size:.78rem; color:var(--muted);">Kode: <span id="qrPanitiaKode">—</span></div>
+      </div>
+      <div class="modal-actions" style="flex-wrap:wrap; gap:8px;">
+        <button class="btn-ghost" onclick="closeQRPanitiaModal()">Tutup</button>
+        <button class="btn-export-lg" onclick="downloadQRPanitia()">⬇ Download</button>
+        <button class="btn-export-lg" onclick="printQRPanitia()">🖨 Print</button>
+      </div>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
