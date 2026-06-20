@@ -1694,10 +1694,57 @@ function downloadQRPanitia() {
   const dataUrl = ambilDataURLQRPanitia();
   if (!dataUrl) { alert("QR belum siap, coba lagi sebentar."); return; }
 
-  const link = document.createElement("a");
-  link.href = dataUrl;
-  link.download = "QR_Panitia_" + qrPanitiaAktif.nama.replace(/\s+/g, "_") + ".png";
-  link.click();
+  const qrImg = new Image();
+  qrImg.onload = function () {
+    // Ukuran kanvas final & layout
+    const W = 480, H = 620;
+    const qrSize = 360;
+    const qrX = (W - qrSize) / 2;
+    const qrBoxY = 150;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+
+    // Background putih
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, W, H);
+
+    // Header navy
+    ctx.fillStyle = "#1E2B4A";
+    ctx.fillRect(0, 0, W, 90);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 24px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("STT Panca Kerti", W / 2, 52);
+
+    // Kotak putih dengan border tipis untuk QR
+    ctx.strokeStyle = "#E2E8F0";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(qrX - 16, qrBoxY - 16, qrSize + 32, qrSize + 32);
+
+    // Gambar QR
+    ctx.drawImage(qrImg, qrX, qrBoxY, qrSize, qrSize);
+
+    // Nama panitia
+    ctx.fillStyle = "#1E2B4A";
+    ctx.font = "bold 26px Arial";
+    ctx.fillText(qrPanitiaAktif.nama, W / 2, qrBoxY + qrSize + 60);
+
+    // Kode QR
+    ctx.fillStyle = "#718096";
+    ctx.font = "16px Arial";
+    ctx.fillText("Kode: " + qrPanitiaAktif.kode, W / 2, qrBoxY + qrSize + 92);
+
+    // Trigger download
+    const finalUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = finalUrl;
+    link.download = "QR_Panitia_" + qrPanitiaAktif.nama.replace(/\s+/g, "_") + ".png";
+    link.click();
+  };
+  qrImg.src = dataUrl;
 }
 
 function printQRPanitia() {
