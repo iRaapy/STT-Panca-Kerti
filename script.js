@@ -1104,21 +1104,52 @@ async function cetakKeuangan() {
     // berbeda dari tabel riwayat di aplikasi yang menampilkan terbaru lebih dulu.
     data = [...data].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
 
-    let totalPemasukan = 0, totalPengeluaran = 0;
-    const baris = data.map((r, i) => {
-      if (r.jenis === "Pemasukan") totalPemasukan += r.nominal;
-      else totalPengeluaran += r.nominal;
-      const isPos = r.jenis === "Pemasukan";
-      return `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${formatTanggal(r.tanggal)}</td>
-          <td><span class="badge-cetak ${isPos ? 'pos' : 'neg'}">${r.jenis}</span></td>
-          <td>${r.kategori}</td>
-          <td class="nominal ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : '-'}${formatRupiahPolos(r.nominal)}</td>
-          <td>${r.keterangan || '—'}</td>
+    // Kelompokkan per bulan (kunci: "2026-06" dst), urut sesuai kemunculan kronologis
+    const namaBulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    const grup = {};
+    const urutanGrup = [];
+    data.forEach(r => {
+      const d = new Date(r.tanggal);
+      const key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      if (!grup[key]) {
+        grup[key] = { label: namaBulan[d.getMonth()] + " " + d.getFullYear(), rows: [], pemasukan: 0, pengeluaran: 0 };
+        urutanGrup.push(key);
+      }
+      grup[key].rows.push(r);
+      if (r.jenis === "Pemasukan") grup[key].pemasukan += r.nominal;
+      else grup[key].pengeluaran += r.nominal;
+    });
+
+    let totalPemasukan = 0, totalPengeluaran = 0, noUrut = 0;
+    let bodyHtml = "";
+
+    urutanGrup.forEach(key => {
+      const g = grup[key];
+      totalPemasukan   += g.pemasukan;
+      totalPengeluaran += g.pengeluaran;
+      const saldoBulan = g.pemasukan - g.pengeluaran;
+
+      bodyHtml += `<tr class="grup-bulan"><td colspan="6">${g.label}</td></tr>`;
+      bodyHtml += g.rows.map(r => {
+        noUrut++;
+        const isPos = r.jenis === "Pemasukan";
+        return `
+          <tr>
+            <td>${noUrut}</td>
+            <td>${formatTanggal(r.tanggal)}</td>
+            <td><span class="badge-cetak ${isPos ? 'pos' : 'neg'}">${r.jenis}</span></td>
+            <td>${r.kategori}</td>
+            <td class="nominal ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : '-'}${formatRupiahPolos(r.nominal)}</td>
+            <td>${r.keterangan || '—'}</td>
+          </tr>`;
+      }).join("");
+      bodyHtml += `
+        <tr class="subtotal-bulan">
+          <td colspan="4">Subtotal ${g.label}</td>
+          <td class="nominal" style="color:#1E2B4A;">${saldoBulan >= 0 ? '+' : '-'}${formatRupiahPolos(Math.abs(saldoBulan))}</td>
+          <td></td>
         </tr>`;
-    }).join("");
+    });
 
     const saldo = totalPemasukan - totalPengeluaran;
 
@@ -1144,10 +1175,18 @@ async function cetakKeuangan() {
         .badge-cetak { padding:3px 9px; border-radius:12px; font-size:10.5px; font-weight:600; }
         .badge-cetak.pos { background:#F0FFF4; color:#2F855A; }
         .badge-cetak.neg { background:#FFF5F5; color:#C53030; }
+        tr.grup-bulan td {
+          background:#1E2B4A !important; color:#fff; font-weight:700; font-size:12.5px;
+          padding:10px 8px; letter-spacing:.02em;
+        }
+        tr.subtotal-bulan td {
+          background:#FBF3DD !important; color:#1E2B4A; font-weight:700;
+          border-top:1.5px solid #E8C97A; border-bottom:1.5px solid #E8C97A;
+        }
         tfoot td { font-weight:700; border-top: 2px solid #1E2B4A; background:#fff !important; }
         tfoot tr.saldo td { background:#1E2B4A !important; color:#fff; font-size:13px; }
         .no-print { display:none; }
-        @media print { body { padding: 10px 18px; } }
+        @media print { body { padding: 10px 18px; } tr.grup-bulan { break-inside: avoid; } }
       </style></head><body>
       <div class="header">
         <img src="logo.png" alt="logo" onerror="this.style.display='none'" />
@@ -1160,7 +1199,7 @@ async function cetakKeuangan() {
         <thead>
           <tr><th>No</th><th>Tanggal</th><th>Jenis</th><th>Kategori</th><th style="text-align:right;">Nominal</th><th>Keterangan</th></tr>
         </thead>
-        <tbody>${baris}</tbody>
+        <tbody>${bodyHtml}</tbody>
         <tfoot>
           <tr><td colspan="4"></td><td class="nominal pos">+${formatRupiahPolos(totalPemasukan)}</td><td>Total Pemasukan</td></tr>
           <tr><td colspan="4"></td><td class="nominal neg">-${formatRupiahPolos(totalPengeluaran)}</td><td>Total Pengeluaran</td></tr>
