@@ -1097,8 +1097,12 @@ async function cetakKeuangan() {
     if (kategori) params.kategori = kategori;
 
     const result = await fetchAPI("getKeuangan", params);
-    const data   = result.data || [];
+    let data = result.data || [];
     if (!data.length) { alert("Tidak ada data keuangan untuk dicetak."); return; }
+
+    // Urutkan kronologis (tanggal paling lama di atas, terbaru di bawah) khusus untuk cetakan,
+    // berbeda dari tabel riwayat di aplikasi yang menampilkan terbaru lebih dulu.
+    data = [...data].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
 
     let totalPemasukan = 0, totalPengeluaran = 0;
     const baris = data.map((r, i) => {
