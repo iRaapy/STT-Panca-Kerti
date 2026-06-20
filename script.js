@@ -2127,6 +2127,7 @@ async function loadUkuranBaju() {
       nama     : a.nama,
       jabatan  : a.jabatan || "Anggota",
       status   : a.statusKeanggotaan || "Aktif",
+      gender   : mapUkuran[a.nama.trim().toLowerCase()]?.gender || null,
       ukuran   : mapUkuran[a.nama.trim().toLowerCase()]?.ukuran || null,
       timestamp: mapUkuran[a.nama.trim().toLowerCase()]?.timestamp || null
     }));
@@ -2147,44 +2148,62 @@ async function loadUkuranBaju() {
 function renderTabelUkuran(data) {
   const tbody = document.getElementById("ukuranTableBody");
   if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Belum ada data anggota.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-row">Belum ada data anggota.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = data.map((r, i) => {
+    const genderIcon = r.gender === "Perempuan" ? "👧" : r.gender === "Laki-laki" ? "👦" : "—";
     const ukuranCell = r.ukuran
       ? `<span class="ukuran-badge-pill">${r.ukuran}</span>`
       : `<span class="ukuran-badge-pill belum">Belum isi</span>`;
-    const tglCell = r.timestamp || "—";
     return `
       <tr>
         <td>${i + 1}</td>
         <td><strong>${r.nama}</strong></td>
         <td>${r.jabatan}</td>
         <td><span class="status-badge ${(r.status||"").toLowerCase()}">${r.status}</span></td>
+        <td>${genderIcon} ${r.gender || "—"}</td>
         <td>${ukuranCell}</td>
-        <td style="font-size:.78rem;color:var(--muted)">${tglCell}</td>
+        <td style="font-size:.78rem;color:var(--muted)">${r.timestamp || "—"}</td>
       </tr>`;
   }).join("");
 }
 
 function renderStatsUkuran(data) {
   const URUTAN = ["XS","S","M","L","XL","XXL","XXXL"];
-  const hitung = {};
-  URUTAN.forEach(u => { hitung[u] = 0; });
-  data.forEach(r => { if (r.ukuran && hitung[r.ukuran] !== undefined) hitung[r.ukuran]++; });
+  const hL = {}, hP = {};
+  URUTAN.forEach(u => { hL[u] = 0; hP[u] = 0; });
+
+  data.forEach(r => {
+    if (!r.ukuran) return;
+    if (r.gender === "Perempuan" && hP[r.ukuran] !== undefined) hP[r.ukuran]++;
+    else if (hL[r.ukuran] !== undefined) hL[r.ukuran]++;
+  });
 
   const belumIsi = data.filter(r => !r.ukuran).length;
+  const totalL   = data.filter(r => r.gender === "Laki-laki" && r.ukuran).length;
+  const totalP   = data.filter(r => r.gender === "Perempuan" && r.ukuran).length;
 
   const container = document.getElementById("ukuranStats");
-  container.innerHTML = URUTAN.map(u => `
-    <div class="ukuran-stat-card">
-      <div class="ukuran-stat-size">${u}</div>
-      <div class="ukuran-stat-count">${hitung[u]} orang</div>
-    </div>`).join("") + `
-    <div class="ukuran-stat-card">
-      <div class="ukuran-stat-size" style="color:var(--muted);font-size:.95rem;">❓</div>
-      <div class="ukuran-stat-count">${belumIsi} belum isi</div>
+  container.innerHTML = `
+    <div style="grid-column:1/-1;font-size:.78rem;font-weight:700;color:var(--navy);padding:4px 0 2px;">👦 Laki-laki (${totalL} orang)</div>
+    ${URUTAN.map(u => `
+      <div class="ukuran-stat-card">
+        <div class="ukuran-stat-size">${u}</div>
+        <div class="ukuran-stat-count">${hL[u]} orang</div>
+      </div>`).join("")}
+    <div style="grid-column:1/-1;font-size:.78rem;font-weight:700;color:var(--navy);padding:10px 0 2px;">👧 Perempuan (${totalP} orang)</div>
+    ${URUTAN.map(u => `
+      <div class="ukuran-stat-card">
+        <div class="ukuran-stat-size">${u}</div>
+        <div class="ukuran-stat-count">${hP[u]} orang</div>
+      </div>`).join("")}
+    <div style="grid-column:1/-1;">
+      <div class="ukuran-stat-card" style="display:flex;align-items:center;gap:10px;padding:10px 14px;">
+        <span style="font-size:1.1rem;">❓</span>
+        <span style="font-size:.82rem;color:var(--muted);">${belumIsi} anggota belum mengisi</span>
+      </div>
     </div>`;
 }
 
@@ -2192,14 +2211,15 @@ function exportUkuranExcel() {
   const rows = [];
   document.querySelectorAll("#ukuranTableBody tr").forEach(tr => {
     const cols = tr.querySelectorAll("td");
-    if (cols.length < 5) return;
+    if (cols.length < 6) return;
     rows.push({
-      "No"           : cols[0].textContent.trim(),
-      "Nama"         : cols[1].textContent.trim(),
-      "Jabatan"      : cols[2].textContent.trim(),
-      "Status"       : cols[3].textContent.trim(),
-      "Ukuran Baju"  : cols[4].textContent.trim(),
-      "Terakhir Diisi": cols[5].textContent.trim()
+      "No"            : cols[0].textContent.trim(),
+      "Nama"          : cols[1].textContent.trim(),
+      "Jabatan"       : cols[2].textContent.trim(),
+      "Status"        : cols[3].textContent.trim(),
+      "Gender"        : cols[4].textContent.trim(),
+      "Ukuran Baju"   : cols[5].textContent.trim(),
+      "Terakhir Diisi": cols[6].textContent.trim()
     });
   });
   downloadExcel(rows, "Ukuran_Baju_Anggota");

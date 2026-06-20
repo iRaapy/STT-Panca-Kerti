@@ -187,6 +187,42 @@
     .footer-note { text-align: center; font-size:.72rem; color:rgba(255,255,255,.6); margin-top: 10px; }
 
     datalist { display: none; }
+
+    /* Gender */
+    .gender-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 0;
+    }
+    .gender-option {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 8px;
+      text-align: center;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: var(--bg);
+      transition: all .15s ease;
+    }
+    .gender-option .gender-icon { font-size: 1.6rem; display: block; margin-bottom: 5px; }
+    .gender-option:hover { border-color: var(--navy); color: var(--navy); }
+    .gender-option.selected { border-color: var(--navy); background: var(--navy); color: #fff; }
+
+    /* Tab panduan ukuran */
+    .panduan-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .panduan-tab {
+      flex: 1; padding: 8px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: .82rem; font-weight: 600;
+      text-align: center; cursor: pointer;
+      color: var(--muted); background: var(--bg);
+      transition: all .15s;
+    }
+    .panduan-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
   </style>
 </head>
 <body>
@@ -213,7 +249,7 @@
 
       <div id="sudahIsiInfo" class="sudah-isi-badge hidden">
         <span>👕</span>
-        <span>Ukuran tersimpan: <strong id="sudahIsiUkuran">—</strong></span>
+        <span>Tersimpan: <strong id="sudahIsiGender">—</strong> · <strong id="sudahIsiUkuran">—</strong></span>
         <span style="margin-left:auto;font-size:.75rem;color:var(--muted)" id="sudahIsiTgl"></span>
       </div>
 
@@ -226,6 +262,18 @@
           autocomplete="off" oninput="onNamaInput()" />
         <datalist id="listNama"></datalist>
         <p class="form-hint">Pilih dari daftar nama anggota terdaftar.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Jenis Kelamin <span>*</span></label>
+        <div class="gender-grid">
+          <div class="gender-option" data-val="Laki-laki" onclick="pilihGender(this)">
+            <span class="gender-icon">👦</span>Laki-laki
+          </div>
+          <div class="gender-option" data-val="Perempuan" onclick="pilihGender(this)">
+            <span class="gender-icon">👧</span>Perempuan
+          </div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -262,21 +310,13 @@
 
     <!-- Panduan Ukuran -->
     <div class="card hidden" id="panduanState">
-      <p class="card-title">📏 Panduan Ukuran</p>
+      <p class="card-title" id="panduanJudul">📏 Panduan Ukuran</p>
       <div class="size-guide">
         <table>
           <thead>
             <tr><th>Ukuran</th><th>Lingkar Dada (cm)</th><th>Panjang Baju (cm)</th><th>Berat Badan (kg)</th></tr>
           </thead>
-          <tbody>
-            <tr><td>XS</td><td>84–88</td><td>66</td><td>45–55</td></tr>
-            <tr><td>S</td><td>88–92</td><td>68</td><td>55–65</td></tr>
-            <tr><td>M</td><td>92–96</td><td>70</td><td>65–70</td></tr>
-            <tr><td>L</td><td>96–100</td><td>72</td><td>70–80</td></tr>
-            <tr><td>XL</td><td>100–106</td><td>74</td><td>80–90</td></tr>
-            <tr><td>XXL</td><td>106–112</td><td>76</td><td>90–100</td></tr>
-            <tr><td>XXXL</td><td>112–120</td><td>78</td><td>100–115</td></tr>
-          </tbody>
+          <tbody id="panduanTbody"></tbody>
         </table>
       </div>
     </div>
@@ -300,7 +340,186 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbwBRo4fxw7qtrN4itNXFqsK_ZRrWxqhot6__qdFa68pg-emJ6gB_Fj9cBw6KXIyK3bm/exec";
 
     let ukuranTerpilih = "";
+    let genderTerpilih = "";
     let namaTerpilihSebelumnya = "";
+
+    // Data panduan ukuran per gender
+    const PANDUAN = {
+      "Laki-laki": [
+        { u:"XS",   dada:"84–88",   panjang:"66", bb:"45–55" },
+        { u:"S",    dada:"88–92",   panjang:"68", bb:"55–65" },
+        { u:"M",    dada:"92–96",   panjang:"70", bb:"65–70" },
+        { u:"L",    dada:"96–100",  panjang:"72", bb:"70–80" },
+        { u:"XL",   dada:"100–106", panjang:"74", bb:"80–90" },
+        { u:"XXL",  dada:"106–112", panjang:"76", bb:"90–100" },
+        { u:"XXXL", dada:"112–120", panjang:"78", bb:"100–115" },
+      ],
+      "Perempuan": [
+        { u:"XS",   dada:"76–80",  panjang:"58", bb:"40–48" },
+        { u:"S",    dada:"80–84",  panjang:"60", bb:"48–54" },
+        { u:"M",    dada:"84–88",  panjang:"62", bb:"54–60" },
+        { u:"L",    dada:"88–92",  panjang:"64", bb:"60–68" },
+        { u:"XL",   dada:"92–98",  panjang:"66", bb:"68–76" },
+        { u:"XXL",  dada:"98–104", panjang:"68", bb:"76–85" },
+        { u:"XXXL", dada:"104–112","panjang":"70", bb:"85–95" },
+      ]
+    };
+
+    async function fetchAPI(action, params = {}) {
+      const url = new URL(API_URL);
+      url.searchParams.set("action", action);
+      url.searchParams.set("payload", JSON.stringify(params));
+      Object.keys(params).forEach(k => {
+        if (typeof params[k] === "string") url.searchParams.set(k, params[k]);
+      });
+      const res  = await fetch(url);
+      const json = await res.json();
+      if (json.status !== "success") throw new Error(json.message || "Gagal.");
+      return json;
+    }
+
+    async function writeAPI(action, data) {
+      const url = new URL(API_URL);
+      url.searchParams.set("action", action);
+      url.searchParams.set("payload", JSON.stringify(data));
+      const res  = await fetch(url);
+      const json = await res.json();
+      if (json.status !== "success") throw new Error(json.message || "Gagal menyimpan.");
+      return json;
+    }
+
+    function showState(...ids) {
+      ["loadingState","formState","panduanState","successState"].forEach(id =>
+        document.getElementById(id).classList.toggle("hidden", !ids.includes(id)));
+    }
+
+    function showAlert(type, msg) {
+      const el = document.getElementById("formAlert");
+      el.textContent  = msg;
+      el.className    = "alert " + type;
+      el.classList.remove("hidden");
+    }
+    function hideAlert() {
+      document.getElementById("formAlert").classList.add("hidden");
+    }
+
+    function pilihGender(el) {
+      document.querySelectorAll(".gender-option").forEach(o => o.classList.remove("selected"));
+      el.classList.add("selected");
+      genderTerpilih = el.dataset.val;
+      hideAlert();
+      renderPanduan(genderTerpilih);
+    }
+
+    function pilihUkuran(el) {
+      document.querySelectorAll(".ukuran-option").forEach(o => o.classList.remove("selected"));
+      el.classList.add("selected");
+      ukuranTerpilih = el.dataset.val;
+      hideAlert();
+    }
+
+    // Render panduan ukuran sesuai gender yang dipilih
+    function renderPanduan(gender) {
+      const tbody = document.getElementById("panduanTbody");
+      const judul = document.getElementById("panduanJudul");
+      const data  = PANDUAN[gender] || PANDUAN["Laki-laki"];
+      judul.textContent = "📏 Panduan Ukuran — " + (gender || "Pilih Gender Dulu");
+      tbody.innerHTML = data.map(r =>
+        `<tr><td>${r.u}</td><td>${r.dada}</td><td>${r.panjang}</td><td>${r.bb}</td></tr>`
+      ).join("");
+    }
+
+    // Kalau nama dipilih, cek apakah sudah pernah isi ukuran sebelumnya
+    async function onNamaInput() {
+      const nama = document.getElementById("inputNama").value.trim();
+      if (!nama || nama === namaTerpilihSebelumnya) return;
+      namaTerpilihSebelumnya = nama;
+
+      try {
+        const res = await fetchAPI("getUkuranByNama", { nama });
+        const info = document.getElementById("sudahIsiInfo");
+        if (res.data) {
+          document.getElementById("sudahIsiGender").textContent = res.data.gender || "—";
+          document.getElementById("sudahIsiUkuran").textContent = res.data.ukuran || "—";
+          document.getElementById("sudahIsiTgl").textContent    = "Diisi: " + (res.data.timestamp || "");
+          info.classList.remove("hidden");
+
+          // Auto-pilih gender tersimpan
+          if (res.data.gender) {
+            const gEl = document.querySelector(`.gender-option[data-val="${res.data.gender}"]`);
+            if (gEl) pilihGender(gEl);
+          }
+          // Auto-pilih ukuran tersimpan
+          if (res.data.ukuran) {
+            const uEl = document.querySelector(`.ukuran-option[data-val="${res.data.ukuran}"]`);
+            if (uEl) pilihUkuran(uEl);
+          }
+        } else {
+          info.classList.add("hidden");
+        }
+      } catch (_) {
+        document.getElementById("sudahIsiInfo").classList.add("hidden");
+      }
+    }
+
+    async function submitUkuran() {
+      const nama = document.getElementById("inputNama").value.trim();
+      if (!nama)           { showAlert("error", "Nama wajib diisi."); return; }
+      if (!genderTerpilih) { showAlert("error", "Pilih jenis kelamin kamu."); return; }
+      if (!ukuranTerpilih) { showAlert("error", "Pilih ukuran baju kamu."); return; }
+
+      const btn = document.getElementById("submitBtn");
+      btn.disabled    = true;
+      btn.textContent = "Menyimpan...";
+
+      try {
+        const result = await writeAPI("simpanUkuranBaju", {
+          nama, ukuran: ukuranTerpilih, gender: genderTerpilih
+        });
+        document.getElementById("successMsg").textContent =
+          result.updated
+            ? `Data diperbarui: ${genderTerpilih}, ukuran ${ukuranTerpilih}. Terima kasih, ${nama}!`
+            : `Ukuran ${ukuranTerpilih} (${genderTerpilih}) untuk ${nama} berhasil disimpan. Terima kasih!`;
+        document.getElementById("formState").classList.add("hidden");
+        document.getElementById("successState").classList.remove("hidden");
+      } catch (err) {
+        showAlert("error", err.message);
+        btn.disabled    = false;
+        btn.textContent = "Simpan Ukuran Baju";
+      }
+    }
+
+    function isiLagi() {
+      document.getElementById("inputNama").value = "";
+      document.querySelectorAll(".ukuran-option").forEach(o => o.classList.remove("selected"));
+      document.querySelectorAll(".gender-option").forEach(o => o.classList.remove("selected"));
+      document.getElementById("sudahIsiInfo").classList.add("hidden");
+      ukuranTerpilih         = "";
+      genderTerpilih         = "";
+      namaTerpilihSebelumnya = "";
+      const btn = document.getElementById("submitBtn");
+      btn.disabled    = false;
+      btn.textContent = "Simpan Ukuran Baju";
+      showState("formState", "panduanState");
+    }
+
+    async function init() {
+      renderPanduan("Laki-laki"); // default tampilkan panduan laki-laki dulu
+      try {
+        const result = await fetchAPI("getAnggota");
+        const datalist = document.getElementById("listNama");
+        (result.data || []).forEach(a => {
+          const opt = document.createElement("option");
+          opt.value = a.nama;
+          datalist.appendChild(opt);
+        });
+        showState("formState", "panduanState");
+      } catch (err) {
+        showState("formState", "panduanState");
+      }
+    }
+
+    init();
 
     async function fetchAPI(action, params = {}) {
       const url = new URL(API_URL);
