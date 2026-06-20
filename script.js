@@ -1658,11 +1658,17 @@ function lihatQRPanitia(nama, kodeQR) {
   document.getElementById("qrPanitiaNama").textContent = nama;
   document.getElementById("qrPanitiaKode").textContent = kodeQR;
 
-  // Pakai Google Chart API untuk generate gambar QR langsung (selalu render,
-  // tidak bergantung timing JS seperti library QRCode.js sebelumnya)
-  const qrUrl = "https://chart.googleapis.com/chart?chs=400x400&cht=qr&chl=" +
-    encodeURIComponent(kodeQR) + "&choe=UTF-8";
-  document.getElementById("qrPanitiaImg").src = qrUrl;
+  // Kosongkan dulu container, lalu generate QR via library QRCode.js (lokal,
+  // tidak bergantung API eksternal yang bisa down/deprecated).
+  const container = document.getElementById("qrPanitiaImgBox");
+  container.innerHTML = "";
+  new QRCode(container, {
+    text: kodeQR,
+    width: 220,
+    height: 220,
+    colorDark: "#1E2B4A",
+    colorLight: "#ffffff"
+  });
 
   document.getElementById("qrPanitiaBackdrop").classList.remove("hidden");
 }
@@ -1671,24 +1677,33 @@ function closeQRPanitiaModal() {
   document.getElementById("qrPanitiaBackdrop").classList.add("hidden");
 }
 
-async function downloadQRPanitia() {
-  try {
-    const img = document.getElementById("qrPanitiaImg");
-    const response = await fetch(img.src);
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
+// QRCode.js menghasilkan <canvas> (umumnya) atau <img> di dalam container,
+// tergantung browser. Helper ini mengambil data gambar (base64 PNG) dari keduanya.
+function ambilDataURLQRPanitia() {
+  const container = document.getElementById("qrPanitiaImgBox");
+  const canvas = container.querySelector("canvas");
+  if (canvas) return canvas.toDataURL("image/png");
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "QR_Panitia_" + qrPanitiaAktif.nama.replace(/\s+/g, "_") + ".png";
-    link.click();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    alert("Gagal mengunduh QR: " + err.message);
-  }
+  const img = container.querySelector("img");
+  if (img) return img.src; // QRCode.js biasanya sudah set src berupa data URL
+
+  return null;
+}
+
+function downloadQRPanitia() {
+  const dataUrl = ambilDataURLQRPanitia();
+  if (!dataUrl) { alert("QR belum siap, coba lagi sebentar."); return; }
+
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = "QR_Panitia_" + qrPanitiaAktif.nama.replace(/\s+/g, "_") + ".png";
+  link.click();
 }
 
 function printQRPanitia() {
+  const dataUrl = ambilDataURLQRPanitia();
+  if (!dataUrl) { alert("QR belum siap, coba lagi sebentar."); return; }
+
   const w = window.open("", "_blank");
   w.document.write(`
     <!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -1702,7 +1717,7 @@ function printQRPanitia() {
     </style></head><body>
     <h1>STT Panca Kerti</h1>
     <h2>Kartu Panitia: ${qrPanitiaAktif.nama}</h2>
-    <img src="${document.getElementById('qrPanitiaImg').src}" />
+    <img src="${dataUrl}" />
     <div class="kode">Kode: ${qrPanitiaAktif.kode}</div>
     <script>window.onload=()=>{window.print();}<\/script>
     </body></html>
