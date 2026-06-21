@@ -2274,19 +2274,41 @@ async function loadUkuranBaju() {
     const dataUkuran  = resUkuran.data || [];
     const dataAnggota = daftarAnggota || [];
 
-    // Map nama → ukuran untuk lookup cepat
+    // Map nama → ukuran untuk lookup cepat (key dinormalisasi: trim + lowercase)
     const mapUkuran = {};
-    dataUkuran.forEach(u => { mapUkuran[u.nama.trim().toLowerCase()] = u; });
+    dataUkuran.forEach(u => { mapUkuran[normalisasiNamaUkuran(u.nama)] = u; });
 
     // Gabungkan: semua anggota + status ukurannya
-    const gabungan = dataAnggota.map(a => ({
-      nama     : a.nama,
-      jabatan  : a.jabatan || "Anggota",
-      status   : a.statusKeanggotaan || "Aktif",
-      gender   : mapUkuran[a.nama.trim().toLowerCase()]?.gender || null,
-      ukuran   : mapUkuran[a.nama.trim().toLowerCase()]?.ukuran || null,
-      timestamp: mapUkuran[a.nama.trim().toLowerCase()]?.timestamp || null
-    }));
+    const namaAnggotaTernormal = new Set();
+    const gabungan = dataAnggota.map(a => {
+      const key = normalisasiNamaUkuran(a.nama);
+      namaAnggotaTernormal.add(key);
+      const u = mapUkuran[key];
+      return {
+        nama     : a.nama,
+        jabatan  : a.jabatan || "Anggota",
+        status   : a.statusKeanggotaan || "Aktif",
+        gender   : u?.gender || null,
+        ukuran   : u?.ukuran || null,
+        timestamp: u?.timestamp || null
+      };
+    });
+
+    // Cari entri di sheet Ukuran_Baju yang namanya TIDAK cocok dengan siapapun
+    // di Daftar Anggota (mis. typo nama, atau orang yang sudah isi tapi belum
+    // terdaftar sebagai anggota). Supaya tetap kehitung di ringkasan & tabel,
+    // bukan "hilang diam-diam".
+    const tidakCocok = dataUkuran.filter(u => !namaAnggotaTernormal.has(normalisasiNamaUkuran(u.nama)));
+    tidakCocok.forEach(u => {
+      gabungan.push({
+        nama     : u.nama + " ⚠️",
+        jabatan  : "Tidak terdaftar di Anggota",
+        status   : "—",
+        gender   : u.gender || null,
+        ukuran   : u.ukuran || null,
+        timestamp: u.timestamp || null
+      });
+    });
 
     renderTabelUkuran(gabungan);
     renderStatsUkuran(gabungan);
@@ -2295,10 +2317,24 @@ async function loadUkuranBaju() {
     document.getElementById("ukuranBadge").textContent =
       sudahIsi + " / " + gabungan.length + " sudah isi";
 
+    if (tidakCocok.length > 0) {
+      console.warn(
+        tidakCocok.length + " entri di Ukuran_Baju namanya tidak cocok persis dengan Daftar Anggota:",
+        tidakCocok.map(u => u.nama)
+      );
+    }
+
   } catch (err) {
     document.getElementById("ukuranTableBody").innerHTML =
       `<tr><td colspan="6" class="empty-row">❌ ${err.message}</td></tr>`;
   }
+}
+
+// Normalisasi nama untuk pencocokan: trim spasi berlebih, lowercase,
+// dan rapikan spasi ganda jadi satu spasi (mengantisipasi typo spasi).
+function normalisasiNamaUkuran(nama) {
+  if (!nama) return "";
+  return nama.toString().trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function renderTabelUkuran(data) {
