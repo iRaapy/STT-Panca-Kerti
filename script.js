@@ -237,6 +237,32 @@ async function loadAnggota() {
   }
 }
 
+// Urutan hierarki untuk Daftar Anggota: jabatan struktural dulu (Ketua → Kesinoman),
+// baru anggota biasa dikelompokkan per status (Aktif → Nonaktif → Pengampel).
+// Dipakai bersama oleh tabel di layar dan halaman cetak supaya urutannya konsisten.
+const URUTAN_JABATAN = ["Ketua", "Wakil Ketua", "Sekretaris", "Bendahara", "Kesinoman"];
+const URUTAN_STATUS_ANGGOTA = ["Aktif", "Nonaktif", "Pengampel"];
+
+function urutkanHierarkiAnggota(rows) {
+  return [...rows].sort((a, b) => {
+    const idxA = peringkatHierarkiAnggota(a);
+    const idxB = peringkatHierarkiAnggota(b);
+    if (idxA !== idxB) return idxA - idxB;
+    return a.nama.localeCompare(b.nama); // dalam kelompok yang sama, urut alfabetis
+  });
+}
+
+function peringkatHierarkiAnggota(r) {
+  const jabatan = r.jabatan || "Anggota";
+  const idxJabatan = URUTAN_JABATAN.indexOf(jabatan);
+  if (idxJabatan !== -1) return idxJabatan; // 0-4: jabatan struktural
+
+  // Anggota biasa: dikelompokkan setelah semua jabatan struktural, per status
+  const status = r.statusKeanggotaan || "Aktif";
+  const idxStatus = URUTAN_STATUS_ANGGOTA.indexOf(status);
+  return URUTAN_JABATAN.length + (idxStatus === -1 ? URUTAN_STATUS_ANGGOTA.length : idxStatus);
+}
+
 function filterTabelAnggota() {
   const cariNama   = (document.getElementById("angFilterNama")?.value || "").toLowerCase().trim();
   const cariStatus = (document.getElementById("angFilterStatus")?.value || "");
@@ -245,7 +271,7 @@ function filterTabelAnggota() {
   if (cariNama)   filtered = filtered.filter(r => r.nama.toLowerCase().includes(cariNama));
   if (cariStatus) filtered = filtered.filter(r => (r.statusKeanggotaan || "Aktif") === cariStatus);
 
-  renderTabelAnggota(filtered);
+  renderTabelAnggota(urutkanHierarkiAnggota(filtered));
 }
 
 function resetFilterAnggota() {
@@ -2615,6 +2641,96 @@ async function cetakKeuanganEvent() {
           <tr><td colspan="3"></td><td class="nominal neg">-${formatRupiahPolos(totalPengeluaran)}</td><td>Total Pengeluaran</td></tr>
           <tr class="saldo"><td colspan="3"></td><td class="nominal" style="color:#fff;">${saldo >= 0 ? '+' : '-'}${formatRupiahPolos(Math.abs(saldo))}</td><td>SALDO EVENT</td></tr>
         </tfoot>
+      </table>
+      <script>window.onload=()=>{window.print();}<\/script>
+      </body></html>
+    `);
+    w.document.close();
+  } catch (e) { alert("Gagal memuat data: " + e.message); }
+}
+
+// Cetak Daftar Anggota dengan urutan hierarki: jabatan struktural dulu
+// (Ketua → Wakil Ketua → Sekretaris → Bendahara → Kesinoman), lalu anggota
+// biasa dikelompokkan per status (Aktif → Nonaktif → Pengampel). Tiap
+// kelompok punya header pemisah, mirip pengelompokan per bulan di cetak Keuangan.
+async function cetakAnggota() {
+  try {
+    const result = await fetchAPI("getAnggota");
+    const data = result.data || [];
+    if (!data.length) { alert("Tidak ada data anggota untuk dicetak."); return; }
+
+    const terurut = urutkanHierarkiAnggota(data);
+
+    // Kelompokkan untuk header pemisah
+    const grup = {};
+    const urutanGrup = [];
+    terurut.forEach(r => {
+      const jabatan = r.jabatan || "Anggota";
+      let label;
+      if (URUTAN_JABATAN.includes(jabatan)) {
+        label = jabatan;
+      } else {
+        label = "Anggota — " + (r.statusKeanggotaan || "Aktif");
+      }
+      if (!grup[label]) { grup[label] = []; urutanGrup.push(label); }
+      grup[label].push(r);
+    });
+
+    let noUrut = 0;
+    let bodyHtml = "";
+    urutanGrup.forEach(label => {
+      bodyHtml += `<tr class="grup-jabatan"><td colspan="5">${label} (${grup[label].length} orang)</td></tr>`;
+      bodyHtml += grup[label].map(r => {
+        noUrut++;
+        return `
+          <tr>
+            <td>${noUrut}</td>
+            <td>${r.nama}</td>
+            <td>${r.jabatan || "Anggota"}</td>
+            <td><span class="badge-cetak ${(r.statusKeanggotaan || 'aktif').toLowerCase() === 'nonaktif' ? 'neg' : 'pos'}">${r.statusKeanggotaan || "Aktif"}</span></td>
+            <td>${r.kontak || "—"}</td>
+          </tr>`;
+      }).join("");
+    });
+
+    const w = window.open("", "_blank");
+    w.document.write(`
+      <!DOCTYPE html><html><head>
+      <meta charset="UTF-8">
+      <title>STT Panca Kerti — Data Anggota</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #2D3748; padding: 30px 36px; }
+        .header { display:flex; align-items:center; gap:14px; border-bottom: 3px solid #1E2B4A; padding-bottom:14px; margin-bottom:18px; }
+        .header img { width:50px; height:50px; object-fit:contain; }
+        .header h1 { color: #1E2B4A; font-size: 19px; margin:0; }
+        .header p  { color: #718096; font-size: 12px; margin:2px 0 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+        th { background: #1E2B4A; color: #fff; padding: 9px 8px; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.02em; }
+        td { padding: 8px; border-bottom: 1px solid #E2E8F0; }
+        tr:nth-child(even) td { background: #F7F9FC; }
+        .badge-cetak { padding:3px 9px; border-radius:12px; font-size:10.5px; font-weight:600; }
+        .badge-cetak.pos { background:#F0FFF4; color:#2F855A; }
+        .badge-cetak.neg { background:#FFF5F5; color:#C53030; }
+        tr.grup-jabatan td {
+          background:#1E2B4A !important; color:#fff; font-weight:700; font-size:12.5px;
+          padding:10px 8px; letter-spacing:.02em;
+        }
+        .no-print { display:none; }
+        @media print { body { padding: 10px 18px; } tr.grup-jabatan { break-inside: avoid; } }
+      </style></head><body>
+      <div class="header">
+        <img src="logo.png" alt="logo" onerror="this.style.display='none'" />
+        <div>
+          <h1>STT Panca Kerti — Data Anggota</h1>
+          <p>Total ${data.length} anggota &middot; Dicetak: ${new Date().toLocaleDateString("id-ID",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>No</th><th>Nama</th><th>Jabatan</th><th>Status</th><th>Kontak</th></tr>
+        </thead>
+        <tbody>${bodyHtml}</tbody>
       </table>
       <script>window.onload=()=>{window.print();}<\/script>
       </body></html>

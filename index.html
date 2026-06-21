@@ -222,7 +222,7 @@
             <button class="btn-secondary-sm" onclick="loadAnggota()">↻ Refresh</button>
             <button class="btn-export" onclick="exportAnggotaExcel()">⬇ Excel</button>
             <button class="btn-export" onclick="exportAnggotaPDF()">⬇ PDF</button>
-            <button class="btn-export" onclick="cetakHalaman('page-anggota')">🖨 Cetak</button>
+            <button class="btn-export" onclick="cetakAnggota()">🖨 Cetak</button>
             <button class="btn-primary" style="font-size:.82rem;padding:6px 14px;" onclick="navigateTo('ukuran')">👕 Ukuran Baju</button>
           </div>
         </div>
@@ -769,7 +769,7 @@
             <div class="export-group">
               <div class="export-label">🖨 Cetak Halaman</div>
               <div class="export-btns">
-                <button class="btn-export-lg" onclick="navigateTo('anggota');setTimeout(()=>cetakHalaman('page-anggota'),500)">Anggota</button>
+                <button class="btn-export-lg" onclick="cetakAnggota()">Anggota</button>
                 <button class="btn-export-lg" onclick="cetakKeuangan()">Keuangan</button>
               </div>
             </div>
