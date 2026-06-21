@@ -2499,3 +2499,90 @@ function konfirmasiSubmitKeuanganEvent() {
     }
   };
 }
+
+// Cetak laporan keuangan KHUSUS untuk 1 event yang sedang dibuka.
+// Tampilan dibuat sama persis dengan cetakKeuangan() (Keuangan STT utama),
+// tapi datanya diambil dari Keuangan_Event (bukan Keuangan utama).
+async function cetakKeuanganEvent() {
+  if (!eventAktifId) { alert("Tidak ada event yang dibuka."); return; }
+
+  try {
+    const result = await fetchAPI("getKeuanganEvent", { eventId: eventAktifId });
+    const { transaksi } = result.data;
+    let data = transaksi.filter(t => t.jenis !== "__LOCKED__");
+
+    if (!data.length) { alert("Belum ada transaksi keuangan untuk event ini."); return; }
+
+    // Urutkan kronologis (tanggal lama ke baru), sama seperti cetak Keuangan utama
+    data = [...data].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+    const namaEvent = document.getElementById("evtDetailNama").textContent;
+
+    let totalPemasukan = 0, totalPengeluaran = 0;
+    const baris = data.map((r, i) => {
+      if (r.jenis === "Pemasukan") totalPemasukan += r.nominal;
+      else totalPengeluaran += r.nominal;
+      const isPos = r.jenis === "Pemasukan";
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${formatTanggal(r.tanggal)}</td>
+          <td><span class="badge-cetak ${isPos ? 'pos' : 'neg'}">${r.jenis}</span></td>
+          <td class="nominal ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : '-'}${formatRupiahPolos(r.nominal)}</td>
+          <td>${r.keterangan || '—'}</td>
+        </tr>`;
+    }).join("");
+
+    const saldo = totalPemasukan - totalPengeluaran;
+
+    const w = window.open("", "_blank");
+    w.document.write(`
+      <!DOCTYPE html><html><head>
+      <meta charset="UTF-8">
+      <title>STT Panca Kerti — Keuangan Event: ${namaEvent}</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #2D3748; padding: 30px 36px; }
+        .header { display:flex; align-items:center; gap:14px; border-bottom: 3px solid #1E2B4A; padding-bottom:14px; margin-bottom:18px; }
+        .header img { width:50px; height:50px; object-fit:contain; }
+        .header h1 { color: #1E2B4A; font-size: 19px; margin:0; }
+        .header p  { color: #718096; font-size: 12px; margin:2px 0 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+        th { background: #1E2B4A; color: #fff; padding: 9px 8px; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.02em; }
+        td { padding: 8px; border-bottom: 1px solid #E2E8F0; }
+        tr:nth-child(even) td { background: #F7F9FC; }
+        .nominal { text-align: right; font-weight:600; white-space:nowrap; }
+        .nominal.pos { color: #2F855A; }
+        .nominal.neg { color: #C53030; }
+        .badge-cetak { padding:3px 9px; border-radius:12px; font-size:10.5px; font-weight:600; }
+        .badge-cetak.pos { background:#F0FFF4; color:#2F855A; }
+        .badge-cetak.neg { background:#FFF5F5; color:#C53030; }
+        tfoot td { font-weight:700; border-top: 2px solid #1E2B4A; background:#fff !important; }
+        tfoot tr.saldo td { background:#1E2B4A !important; color:#fff; font-size:13px; }
+        .no-print { display:none; }
+        @media print { body { padding: 10px 18px; } }
+      </style></head><body>
+      <div class="header">
+        <img src="logo.png" alt="logo" onerror="this.style.display='none'" />
+        <div>
+          <h1>STT Panca Kerti — Keuangan Event</h1>
+          <p>${namaEvent} &middot; Dicetak: ${new Date().toLocaleDateString("id-ID",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>No</th><th>Tanggal</th><th>Jenis</th><th style="text-align:right;">Nominal</th><th>Keterangan</th></tr>
+        </thead>
+        <tbody>${baris}</tbody>
+        <tfoot>
+          <tr><td colspan="3"></td><td class="nominal pos">+${formatRupiahPolos(totalPemasukan)}</td><td>Total Pemasukan</td></tr>
+          <tr><td colspan="3"></td><td class="nominal neg">-${formatRupiahPolos(totalPengeluaran)}</td><td>Total Pengeluaran</td></tr>
+          <tr class="saldo"><td colspan="3"></td><td class="nominal" style="color:#fff;">${saldo >= 0 ? '+' : '-'}${formatRupiahPolos(Math.abs(saldo))}</td><td>SALDO EVENT</td></tr>
+        </tfoot>
+      </table>
+      <script>window.onload=()=>{window.print();}<\/script>
+      </body></html>
+    `);
+    w.document.close();
+  } catch (e) { alert("Gagal memuat data: " + e.message); }
+}
