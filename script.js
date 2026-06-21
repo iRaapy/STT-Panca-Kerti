@@ -1599,6 +1599,7 @@ async function bukaDetailEvent(eventId) {
   } catch (e) { /* abaikan jika gagal load nama */ }
 
   await refreshDetailEvent();
+  await refreshKeuanganEvent();
 }
 
 function kembaliKeListEvent() {
@@ -2378,4 +2379,123 @@ function exportUkuranExcel() {
     });
   });
   downloadExcel(rows, "Ukuran_Baju_Anggota");
+}
+
+// ═══ KEUANGAN EVENT ════════════════════════════════════════
+//
+// Pencatatan keuangan khusus per event (terpisah dari Keuangan STT utama).
+// Saat event selesai, bendahara klik "Tambahkan ke Keuangan STT" untuk
+// mengirim ringkasan total (Pemasukan & Pengeluaran) ke modul Keuangan utama,
+// setelah itu transaksi event ini terkunci permanen.
+
+async function refreshKeuanganEvent() {
+  if (!eventAktifId) return;
+  try {
+    const result = await fetchAPI("getKeuanganEvent", { eventId: eventAktifId });
+    const { transaksi, terkunci, totalPemasukan, totalPengeluaran } = result.data;
+    const saldo = totalPemasukan - totalPengeluaran;
+
+    document.getElementById("evtKeuTotalMasuk").textContent = formatRupiah(totalPemasukan);
+    document.getElementById("evtKeuTotalKeluar").textContent = formatRupiah(totalPengeluaran);
+    document.getElementById("evtKeuSaldo").textContent = formatRupiah(saldo);
+
+    const lockedBadge = document.getElementById("evtKeuLockedBadge");
+    const formBox      = document.getElementById("evtKeuFormBox");
+    const submitBox     = document.getElementById("evtKeuSubmitBox");
+
+    if (terkunci) {
+      lockedBadge.textContent = "🔒 Terkunci (sudah disubmit)";
+      lockedBadge.style.display = "inline-block";
+      formBox.classList.add("hidden");
+      submitBox.classList.add("hidden");
+    } else {
+      lockedBadge.textContent = "";
+      lockedBadge.style.display = "none";
+      formBox.classList.remove("hidden");
+      // Tombol submit hanya muncul kalau sudah ada minimal 1 transaksi
+      submitBox.classList.toggle("hidden", transaksi.length === 0);
+    }
+
+    const tbody = document.getElementById("evtKeuTableBody");
+    const transaksiNyata = transaksi.filter(t => t.jenis !== "__LOCKED__");
+    if (!transaksiNyata.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Belum ada transaksi.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = transaksiNyata.map(t => {
+      const isPos = t.jenis === "Pemasukan";
+      return `
+        <tr>
+          <td>${formatTanggal(t.tanggal)}</td>
+          <td><span class="status-badge ${isPos ? 'hadir' : 'alfa'}">${t.jenis}</span></td>
+          <td style="font-weight:600; color:${isPos ? 'var(--green)' : 'var(--red)'};">${isPos ? '+' : '-'}${formatRupiah(t.nominal)}</td>
+          <td>${t.keterangan || '—'}</td>
+          <td>${terkunci ? '—' : `<button class="btn-hapus" onclick="hapusTransaksiEvent('${t.id}')">Hapus</button>`}</td>
+        </tr>`;
+    }).join("");
+  } catch (err) {
+    console.error("Gagal memuat keuangan event:", err.message);
+  }
+}
+
+async function tambahTransaksiEvent() {
+  const tanggal    = document.getElementById("evtKeuTanggal").value;
+  const jenis      = document.getElementById("evtKeuJenis").value;
+  const nominal    = document.getElementById("evtKeuNominal").value;
+  const keterangan = document.getElementById("evtKeuKeterangan").value.trim();
+
+  if (!tanggal || !nominal) {
+    showAlert("evtKeuAlert", "error", "Tanggal dan nominal wajib diisi.");
+    return;
+  }
+  if (!eventAktifId) return;
+
+  setLoading("evtKeuSubmitBtn", true);
+  try {
+    await writeAPI("tambahKeuanganEvent", { eventId: eventAktifId, tanggal, jenis, nominal, keterangan });
+    showAlert("evtKeuAlert", "success", "✅ Transaksi berhasil ditambahkan!");
+    document.getElementById("evtKeuNominal").value = "";
+    document.getElementById("evtKeuKeterangan").value = "";
+    refreshKeuanganEvent();
+  } catch (err) {
+    showAlert("evtKeuAlert", "error", "❌ Gagal: " + err.message);
+  } finally {
+    setLoading("evtKeuSubmitBtn", false);
+  }
+}
+
+function hapusTransaksiEvent(id) {
+  document.getElementById("modalBody").textContent =
+    "Transaksi ini akan dihapus dari catatan keuangan event.";
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      await writeAPI("hapusKeuanganEvent", { id, eventId: eventAktifId });
+      refreshKeuanganEvent();
+    } catch (err) {
+      alert("❌ Gagal menghapus: " + err.message);
+    }
+  };
+}
+
+function konfirmasiSubmitKeuanganEvent() {
+  document.getElementById("modalBody").textContent =
+    "Ringkasan total Pemasukan & Pengeluaran event ini akan ditambahkan ke Keuangan STT. " +
+    "Setelah ini, seluruh transaksi keuangan event TIDAK BISA diubah lagi. Lanjutkan?";
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    setLoading("evtKeuSubmitUtamaBtn", true);
+    try {
+      const result = await writeAPI("submitKeuanganEventKeUtama", { eventId: eventAktifId });
+      alert("✅ " + result.message);
+      refreshKeuanganEvent();
+    } catch (err) {
+      alert("❌ Gagal: " + err.message);
+    } finally {
+      setLoading("evtKeuSubmitUtamaBtn", false);
+    }
+  };
 }

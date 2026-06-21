@@ -1030,6 +1030,90 @@
             </table>
           </div>
         </div>
+
+        <!-- Keuangan Event -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title">💰 Keuangan Event</h2>
+            <span class="badge" id="evtKeuLockedBadge"></span>
+          </div>
+          <div class="form-body">
+
+            <!-- Form tambah transaksi (disembunyikan kalau sudah terkunci) -->
+            <div id="evtKeuFormBox">
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:140px;">
+                  <label class="form-label">Tanggal <span class="required">*</span></label>
+                  <input type="date" class="form-input" id="evtKeuTanggal" />
+                </div>
+                <div class="form-group" style="flex:1; min-width:140px;">
+                  <label class="form-label">Jenis <span class="required">*</span></label>
+                  <select class="form-input" id="evtKeuJenis">
+                    <option value="Pemasukan">Pemasukan</option>
+                    <option value="Pengeluaran">Pengeluaran</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nominal (Rp) <span class="required">*</span></label>
+                <input type="number" class="form-input" id="evtKeuNominal" placeholder="Contoh: 150000" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Keterangan</label>
+                <input type="text" class="form-input" id="evtKeuKeterangan" placeholder="Contoh: Beli konsumsi" />
+              </div>
+              <div id="evtKeuAlert" class="alert hidden"></div>
+              <button class="btn-primary w-full" id="evtKeuSubmitBtn" onclick="tambahTransaksiEvent()">
+                <span class="btn-text">+ Tambah Transaksi</span>
+                <span class="btn-loading hidden">Menyimpan...</span>
+              </button>
+            </div>
+
+            <!-- Ringkasan -->
+            <div class="rekap-grid mt-4" style="grid-template-columns: repeat(3,1fr); padding:0;">
+              <div class="rekap-stat-card hadir">
+                <div class="rekap-stat-angka" id="evtKeuTotalMasuk" style="font-size:1.3rem;">Rp 0</div>
+                <div class="rekap-stat-label">Pemasukan</div>
+              </div>
+              <div class="rekap-stat-card alfa">
+                <div class="rekap-stat-angka" id="evtKeuTotalKeluar" style="font-size:1.3rem;">Rp 0</div>
+                <div class="rekap-stat-label">Pengeluaran</div>
+              </div>
+              <div class="rekap-stat-card izin">
+                <div class="rekap-stat-angka" id="evtKeuSaldo" style="font-size:1.3rem;">Rp 0</div>
+                <div class="rekap-stat-label">Saldo Event</div>
+              </div>
+            </div>
+
+            <!-- Tabel transaksi -->
+            <div class="table-wrap mt-4">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Tanggal</th><th>Jenis</th><th>Nominal</th><th>Keterangan</th><th>Aksi</th></tr>
+                </thead>
+                <tbody id="evtKeuTableBody">
+                  <tr><td colspan="5" class="empty-row">Belum ada transaksi.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Tombol submit ke Keuangan utama -->
+            <div id="evtKeuSubmitBox" class="hidden mt-4">
+              <div class="info-box" style="margin-bottom:12px;">
+                <div class="info-icon">⚠️</div>
+                <div class="info-text">
+                  <strong>Submit ke Keuangan STT</strong>
+                  Setelah disubmit, ringkasan total Pemasukan & Pengeluaran event ini akan masuk ke modul Keuangan utama, dan transaksi event ini akan <strong>terkunci permanen</strong> (tidak bisa ditambah/diedit/dihapus lagi).
+                </div>
+              </div>
+              <button class="btn-primary w-full" id="evtKeuSubmitUtamaBtn" onclick="konfirmasiSubmitKeuanganEvent()" style="background:var(--green);">
+                <span class="btn-text">✅ Tambahkan ke Keuangan STT</span>
+                <span class="btn-loading hidden">Memproses...</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
       </div>
     </section>
 
