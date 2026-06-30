@@ -138,8 +138,10 @@ function setLoading(btnId, loading) {
   const btn = document.getElementById(btnId);
   if (!btn) return;
   btn.disabled = loading;
-  btn.querySelector(".btn-text").classList.toggle("hidden", loading);
-  btn.querySelector(".btn-loading").classList.toggle("hidden", !loading);
+  const txt = btn.querySelector(".btn-text");
+  const ldg = btn.querySelector(".btn-loading");
+  if (txt) txt.classList.toggle("hidden", loading);
+  if (ldg) ldg.classList.toggle("hidden", !loading);
 }
 
 // ═══ DASHBOARD ════════════════════════════════════════════
