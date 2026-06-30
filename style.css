@@ -1443,3 +1443,72 @@ select.form-input { cursor: pointer; }
   background: var(--border);
   color: var(--muted);
 }
+
+/* ─── PEMBAYARAN GALUNGAN ────────────────────────────────── */
+.galungan-ekstra-wrap {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;
+}
+.galungan-ekstra-btn {
+  padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: .8rem; font-weight: 600; cursor: pointer; background: var(--bg);
+  color: var(--muted); transition: all .15s;
+}
+.galungan-ekstra-btn.active {
+  background: var(--navy); color: #fff; border-color: var(--navy);
+}
+
+.galungan-periode-list {
+  padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.galungan-periode-card {
+  border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+  display: flex; align-items: center; gap: 12px;
+}
+.galungan-periode-card:hover { border-color: var(--navy); box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.galungan-periode-card.aktif-card { border-color: var(--gold); background: #FFFBF0; }
+.galungan-periode-card.selesai-card { opacity: .65; }
+.gal-periode-info { flex: 1; }
+.gal-periode-nama { font-weight: 700; color: var(--navy); font-size: .92rem; }
+.gal-periode-sub  { font-size: .75rem; color: var(--muted); margin-top: 3px; }
+.gal-periode-stat { text-align: right; font-size: .78rem; }
+.gal-periode-stat strong { display: block; font-size: 1rem; color: var(--navy); }
+.gal-status-badge {
+  padding: 3px 9px; border-radius: 20px; font-size: .72rem; font-weight: 700;
+}
+.gal-status-badge.aktif   { background: #F0FFF4; color: var(--green); }
+.gal-status-badge.selesai { background: var(--border); color: var(--muted); }
+
+.galungan-info-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr));
+  gap: 10px; padding: 0 20px 16px;
+}
+.gal-info-card {
+  background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; text-align: center;
+}
+.gal-info-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing:.04em; }
+.gal-info-value { font-size: 1rem; font-weight: 800; color: var(--navy); margin-top: 3px; }
+.gal-info-value.green { color: var(--green); }
+.gal-info-value.red   { color: var(--red);   }
+.gal-info-value.gold  { color: var(--gold);  }
+
+.galungan-tab-wrap {
+  display: flex; border-bottom: 2px solid var(--border); padding: 0 20px;
+}
+.galungan-tab {
+  padding: 10px 16px; font-size: .85rem; font-weight: 600;
+  color: var(--muted); background: none; border: none; cursor: pointer;
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+  display: flex; align-items: center; gap: 6px;
+  transition: color .15s, border-color .15s;
+}
+.galungan-tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+
+.terlambat-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: .72rem; font-weight: 700;
+  background: var(--red-bg); color: var(--red);
+}

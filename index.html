@@ -58,6 +58,9 @@
       <button class="nav-item" data-page="kalender" onclick="navigateTo('kalender')">
         <span class="nav-icon">📅</span><span class="nav-label">Kalender Kegiatan</span>
       </button>
+      <button class="nav-item" data-page="galungan" onclick="navigateTo('galungan')">
+        <span class="nav-icon">🪔</span><span class="nav-label">Pembayaran Galungan</span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="connection-status" id="connectionStatus">
@@ -1306,6 +1309,107 @@
             <tbody id="kalListBody">
               <tr><td colspan="5" class="empty-row">Memuat data...</td></tr>
             </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ PEMBAYARAN GALUNGAN ═══ -->
+    <section class="page" id="page-galungan">
+      <div class="page-header">
+        <h1 class="page-title">🪔 Pembayaran Galungan</h1>
+        <p class="page-subtitle">Pantau iuran anggota per periode Hari Raya Galungan</p>
+      </div>
+
+      <!-- Buat Periode Baru -->
+      <div class="card">
+        <div class="card-header"><h2 class="card-title">Buat Periode Pembayaran</h2></div>
+        <div class="form-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Nama Periode (opsional)</label>
+              <input type="text" class="form-input" id="galNama" placeholder="Cth: Galungan Mei 2026" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nominal Iuran (Rp) <span class="required">*</span></label>
+              <input type="number" class="form-input" id="galNominal" placeholder="Cth: 50000" min="1000" />
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Tanggal Galungan <span class="required">*</span></label>
+              <input type="date" class="form-input" id="galTglGalungan" />
+              <p class="form-hint">Kuningan otomatis dihitung +10 hari</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Perpanjangan Deadline</label>
+              <div class="galungan-ekstra-wrap">
+                <button class="galungan-ekstra-btn active" data-val="0" onclick="pilihEkstraGalungan(this)">Tepat Kuningan</button>
+                <button class="galungan-ekstra-btn" data-val="7" onclick="pilihEkstraGalungan(this)">+1 Minggu</button>
+                <button class="galungan-ekstra-btn" data-val="14" onclick="pilihEkstraGalungan(this)">+2 Minggu</button>
+              </div>
+              <p class="form-hint" id="galDeadlineInfo">Pilih tanggal Galungan dulu</p>
+            </div>
+          </div>
+          <div id="galBuatAlert" class="alert hidden"></div>
+          <button class="btn-primary w-full" id="galBuatBtn" onclick="buatPeriodeGalungan()">+ Buat Periode Pembayaran</button>
+        </div>
+      </div>
+
+      <!-- Daftar Periode -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2 class="card-title">Pilih Periode</h2>
+          <button class="btn-secondary-sm" onclick="loadDaftarPeriodeGalungan()">↻ Refresh</button>
+        </div>
+        <div id="galPeriodeList" class="galungan-periode-list">
+          <p class="empty-row" style="padding:20px;text-align:center;">Memuat data...</p>
+        </div>
+      </div>
+
+      <!-- Detail Pembayaran Periode -->
+      <div class="card mt-4 hidden" id="galDetailCard">
+        <div class="card-header">
+          <h2 class="card-title" id="galDetailJudul">—</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-export" onclick="exportBayarGalungan()">⬇ Excel</button>
+            <button class="btn-secondary-sm" id="galTutupBtn" onclick="tutupPeriodeGalungan()">🔒 Tutup Periode</button>
+          </div>
+        </div>
+
+        <!-- Info Periode -->
+        <div class="galungan-info-grid" id="galInfoGrid"></div>
+
+        <!-- Progress Bar -->
+        <div style="padding:0 20px 16px;">
+          <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:6px;">
+            <span id="galProgressLabel">—</span>
+            <span id="galProgressPct" style="font-weight:700;color:var(--navy);">—</span>
+          </div>
+          <div style="background:var(--border);border-radius:99px;height:10px;overflow:hidden;">
+            <div id="galProgressBar" style="height:100%;background:var(--green);border-radius:99px;width:0%;transition:width .4s ease;"></div>
+          </div>
+        </div>
+
+        <!-- Tab Belum / Sudah Bayar -->
+        <div class="galungan-tab-wrap">
+          <button class="galungan-tab active" id="tabBelum" onclick="switchTabGalungan('belum')">❌ Belum Bayar <span class="badge" id="badgeBelum">0</span></button>
+          <button class="galungan-tab" id="tabSudah" onclick="switchTabGalungan('sudah')">✅ Sudah Bayar <span class="badge" id="badgeSudah">0</span></button>
+        </div>
+
+        <!-- Tabel Belum Bayar -->
+        <div id="panelBelum" class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>No</th><th>Nama</th><th>Jabatan</th><th>Keterangan</th><th>Aksi</th></tr></thead>
+            <tbody id="tblBelumBayar"></tbody>
+          </table>
+        </div>
+
+        <!-- Tabel Sudah Bayar -->
+        <div id="panelSudah" class="table-wrap hidden">
+          <table class="data-table">
+            <thead><tr><th>No</th><th>Nama</th><th>Jabatan</th><th>Tgl Bayar</th><th>Nominal</th><th>Aksi</th></tr></thead>
+            <tbody id="tblSudahBayar"></tbody>
           </table>
         </div>
       </div>

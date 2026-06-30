@@ -50,6 +50,7 @@ function navigateTo(page) {
   if (page === "event")     { kembaliKeListEvent(); loadDaftarEvent(); }
   if (page === "wagroup")   loadDatabaseNomorWA();
   if (page === "kalender")  loadKalender();
+  if (page === "galungan")  initGalungan();
   if (page === "ukuran")    initUkuranBaju();
   closeSidebar();
 }
@@ -2737,4 +2738,297 @@ async function cetakAnggota() {
     `);
     w.document.close();
   } catch (e) { alert("Gagal memuat data: " + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PEMBAYARAN GALUNGAN
+// ═══════════════════════════════════════════════════════════════
+
+let galPeriodeAktifId = null;
+let galEkstraHari     = 0;
+let galDataCache      = null; // cache hasil getStatusPembayaranGalungan
+let galTabAktif       = "belum";
+
+function initGalungan() {
+  // Set tanggal default hari ini
+  const hariIni = new Date().toISOString().split("T")[0];
+  document.getElementById("galTglGalungan").value = hariIni;
+  updateDeadlineInfo();
+  loadDaftarPeriodeGalungan();
+}
+
+function pilihEkstraGalungan(el) {
+  document.querySelectorAll(".galungan-ekstra-btn").forEach(b => b.classList.remove("active"));
+  el.classList.add("active");
+  galEkstraHari = parseInt(el.dataset.val) || 0;
+  updateDeadlineInfo();
+}
+
+function updateDeadlineInfo() {
+  const tgl = document.getElementById("galTglGalungan").value;
+  const info = document.getElementById("galDeadlineInfo");
+  if (!tgl) { info.textContent = "Pilih tanggal Galungan dulu"; return; }
+
+  const kuningan = tambahHariJS(tgl, 10);
+  const deadline = tambahHariJS(kuningan, galEkstraHari);
+
+  const tglF = (s) => {
+    const d = new Date(s + "T00:00:00");
+    const b = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+    return d.getDate() + " " + b[d.getMonth()] + " " + d.getFullYear();
+  };
+
+  info.textContent = "Kuningan: " + tglF(kuningan) +
+    (galEkstraHari > 0 ? " → Deadline: " + tglF(deadline) : " (deadline tepat Kuningan)");
+}
+
+// Helper: tambah N hari ke string tanggal YYYY-MM-DD → YYYY-MM-DD
+function tambahHariJS(tglStr, n) {
+  const d = new Date(tglStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split("T")[0];
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const inp = document.getElementById("galTglGalungan");
+  if (inp) inp.addEventListener("change", updateDeadlineInfo);
+});
+
+async function buatPeriodeGalungan() {
+  const nama     = document.getElementById("galNama").value.trim();
+  const tgl      = document.getElementById("galTglGalungan").value;
+  const nominal  = document.getElementById("galNominal").value;
+
+  if (!tgl)     { showAlert("galBuatAlert","error","Tanggal Galungan wajib diisi."); return; }
+  if (!nominal) { showAlert("galBuatAlert","error","Nominal iuran wajib diisi."); return; }
+
+  setLoading("galBuatBtn", true);
+  try {
+    const result = await writeAPI("buatPeriodeGalungan", {
+      nama, tglGalungan: tgl, nominal: parseFloat(nominal), ekstraHari: galEkstraHari
+    });
+    showAlert("galBuatAlert","success","✅ " + result.message);
+    document.getElementById("galNama").value    = "";
+    document.getElementById("galNominal").value = "";
+    loadDaftarPeriodeGalungan();
+  } catch (err) {
+    showAlert("galBuatAlert","error","❌ " + err.message);
+  } finally {
+    setLoading("galBuatBtn", false);
+  }
+}
+
+async function loadDaftarPeriodeGalungan() {
+  const container = document.getElementById("galPeriodeList");
+  container.innerHTML = `<p class="empty-row" style="padding:16px;text-align:center;">Memuat...</p>`;
+  try {
+    const result = await fetchAPI("getDaftarPeriodeGalungan");
+    const data   = result.data || [];
+
+    if (!data.length) {
+      container.innerHTML = `<p class="empty-row" style="padding:20px;text-align:center;">Belum ada periode pembayaran. Buat periode baru di atas.</p>`;
+      return;
+    }
+
+    const bln = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+    const fmt = s => { if (!s) return "—"; const d = new Date(s+"T00:00:00"); return d.getDate()+" "+bln[d.getMonth()]+" "+d.getFullYear(); };
+
+    container.innerHTML = data.map(p => {
+      const isAktif   = p.status === "Aktif";
+      const hariIni   = new Date().toISOString().split("T")[0];
+      const terlambat = hariIni > p.deadline && isAktif;
+      const pct       = p.sudahBayar && p.sudahBayar > 0 ? Math.round(p.sudahBayar / (p.sudahBayar + (p.totalBelum||0)) * 100) : 0;
+
+      return `
+        <div class="galungan-periode-card ${isAktif?"aktif-card":"selesai-card"}" onclick="pilihPeriodeGalungan('${p.id}')">
+          <div class="gal-periode-info">
+            <div class="gal-periode-nama">${p.nama}</div>
+            <div class="gal-periode-sub">
+              Galungan: ${fmt(p.tglGalungan)} &nbsp;·&nbsp; Kuningan: ${fmt(p.tglKuningan)} &nbsp;·&nbsp; Deadline: ${fmt(p.deadline)}
+              ${terlambat ? ' &nbsp;<span class="terlambat-badge">⚠ Lewat Deadline</span>' : ""}
+            </div>
+            <div class="gal-periode-sub" style="margin-top:4px;">
+              Iuran: <strong>${formatRupiah(p.nominal)}</strong>
+            </div>
+          </div>
+          <div class="gal-periode-stat">
+            <strong>${p.sudahBayar || 0}</strong> sudah bayar
+            <div style="margin-top:4px;"><span class="gal-status-badge ${isAktif?"aktif":"selesai"}">${p.status}</span></div>
+          </div>
+        </div>`;
+    }).join("");
+
+  } catch (err) {
+    container.innerHTML = `<p class="empty-row" style="padding:16px;text-align:center;color:var(--red);">❌ ${err.message}</p>`;
+  }
+}
+
+async function pilihPeriodeGalungan(periodeId) {
+  galPeriodeAktifId = periodeId;
+  document.getElementById("galDetailCard").classList.remove("hidden");
+  document.getElementById("galDetailCard").scrollIntoView({ behavior: "smooth" });
+  await refreshDetailGalungan();
+}
+
+async function refreshDetailGalungan() {
+  if (!galPeriodeAktifId) return;
+  try {
+    const result = await fetchAPI("getStatusPembayaranGalungan", { periodeId: galPeriodeAktifId });
+    galDataCache  = result.data;
+    renderDetailGalungan(galDataCache);
+  } catch (err) {
+    alert("❌ Gagal memuat detail: " + err.message);
+  }
+}
+
+function renderDetailGalungan(d) {
+  const { periode, sudahBayar, belumBayar, totalSudah, totalBelum, totalAnggota, totalTerkumpul } = d;
+  const bln = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+  const fmt = s => { if (!s) return "—"; const dt=new Date(s+"T00:00:00"); return dt.getDate()+" "+bln[dt.getMonth()]+" "+dt.getFullYear(); };
+  const hariIni = new Date().toISOString().split("T")[0];
+  const sisaHari= periode.deadline ? Math.ceil((new Date(periode.deadline)-new Date(hariIni))/(1000*60*60*24)) : 0;
+
+  document.getElementById("galDetailJudul").textContent = "🪔 " + periode.nama;
+
+  // Info grid
+  document.getElementById("galInfoGrid").innerHTML = `
+    <div class="gal-info-card"><div class="gal-info-label">Galungan</div><div class="gal-info-value" style="font-size:.85rem;">${fmt(periode.tglGalungan)}</div></div>
+    <div class="gal-info-card"><div class="gal-info-label">Kuningan</div><div class="gal-info-value" style="font-size:.85rem;">${fmt(periode.tglKuningan)}</div></div>
+    <div class="gal-info-card"><div class="gal-info-label">Deadline</div><div class="gal-info-value" style="font-size:.85rem;">${fmt(periode.deadline)}</div></div>
+    <div class="gal-info-card"><div class="gal-info-label">Sisa Hari</div><div class="gal-info-value ${sisaHari<0?"red":sisaHari<=3?"gold":"green"}">${sisaHari<0?"Lewat":sisaHari+" hari"}</div></div>
+    <div class="gal-info-card"><div class="gal-info-label">Sudah Bayar</div><div class="gal-info-value green">${totalSudah} orang</div></div>
+    <div class="gal-info-card"><div class="gal-info-label">Belum Bayar</div><div class="gal-info-value red">${totalBelum} orang</div></div>
+    <div class="gal-info-card"><div class="gal-info-label">Iuran/Orang</div><div class="gal-info-value" style="font-size:.82rem;">${formatRupiah(periode.nominal)}</div></div>
+    <div class="gal-info-card"><div class="gal-info-label">Terkumpul</div><div class="gal-info-value gold" style="font-size:.82rem;">${formatRupiah(totalTerkumpul)}</div></div>`;
+
+  // Progress
+  const pct = totalAnggota > 0 ? Math.round(totalSudah / totalAnggota * 100) : 0;
+  document.getElementById("galProgressLabel").textContent = `${totalSudah} dari ${totalAnggota} anggota sudah membayar`;
+  document.getElementById("galProgressPct").textContent   = pct + "%";
+  document.getElementById("galProgressBar").style.width   = pct + "%";
+
+  // Badge
+  document.getElementById("badgeBelum").textContent = totalBelum;
+  document.getElementById("badgeSudah").textContent = totalSudah;
+
+  // Sembunyikan tombol tutup kalau sudah selesai
+  document.getElementById("galTutupBtn").style.display = periode.status === "Selesai" ? "none" : "";
+
+  // Render tabel sesuai tab aktif
+  renderTabelGalungan();
+}
+
+function renderTabelGalungan() {
+  if (!galDataCache) return;
+  const { sudahBayar, belumBayar, periode } = galDataCache;
+  const hariIni = new Date().toISOString().split("T")[0];
+  const isSelesai = periode.status === "Selesai";
+
+  // Tabel belum bayar
+  const tblB = document.getElementById("tblBelumBayar");
+  if (!belumBayar.length) {
+    tblB.innerHTML = `<tr><td colspan="5" class="empty-row">🎉 Semua anggota sudah membayar!</td></tr>`;
+  } else {
+    tblB.innerHTML = belumBayar.map((a, i) => {
+      const terlambat = a.terlambat;
+      const aksiBtn = isSelesai ? "—" :
+        `<button class="btn-secondary-sm" style="font-size:.75rem;" onclick="modalTandaiBayarGalungan('${a.nama}')">✅ Tandai Bayar</button>`;
+      return `<tr>
+        <td>${i+1}</td>
+        <td><strong>${a.nama}</strong></td>
+        <td>${a.jabatan||"Anggota"}</td>
+        <td>${terlambat ? '<span class="terlambat-badge">⚠ Terlambat</span>' : '<span style="color:var(--muted);font-size:.8rem;">Belum jatuh tempo</span>'}</td>
+        <td>${aksiBtn}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  // Tabel sudah bayar
+  const tblS = document.getElementById("tblSudahBayar");
+  if (!sudahBayar.length) {
+    tblS.innerHTML = `<tr><td colspan="6" class="empty-row">Belum ada yang membayar.</td></tr>`;
+  } else {
+    tblS.innerHTML = sudahBayar.map((a, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td><strong>${a.nama}</strong></td>
+        <td>${a.jabatan||"Anggota"}</td>
+        <td>${a.bayar?.tglBayar || "—"}</td>
+        <td>${formatRupiah(a.bayar?.nominal || periode.nominal)}</td>
+        <td>${isSelesai ? "—" : `<button class="btn-secondary-sm" style="font-size:.72rem;color:var(--red);" onclick="batalBayarGalungan('${a.bayar?.id}')">Batal</button>`}</td>
+      </tr>`).join("");
+  }
+}
+
+function switchTabGalungan(tab) {
+  galTabAktif = tab;
+  document.getElementById("tabBelum").classList.toggle("active", tab==="belum");
+  document.getElementById("tabSudah").classList.toggle("active", tab==="sudah");
+  document.getElementById("panelBelum").classList.toggle("hidden", tab!=="belum");
+  document.getElementById("panelSudah").classList.toggle("hidden", tab!=="sudah");
+}
+
+function modalTandaiBayarGalungan(nama) {
+  if (!galPeriodeAktifId) return;
+  const nominal = galDataCache?.periode?.nominal || 0;
+  document.getElementById("modalBody").innerHTML =
+    `Tandai <strong>${nama}</strong> sudah membayar iuran Galungan sebesar <strong>${formatRupiah(nominal)}</strong>?`;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      await writeAPI("tandaiSudahBayarGalungan", { periodeId: galPeriodeAktifId, nama, nominal });
+      await refreshDetailGalungan();
+      loadDaftarPeriodeGalungan();
+    } catch (err) { alert("❌ " + err.message); }
+  };
+}
+
+async function batalBayarGalungan(id) {
+  if (!id) return;
+  document.getElementById("modalBody").textContent = "Batalkan catatan pembayaran ini?";
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      await writeAPI("hapusBayarGalungan", { id });
+      await refreshDetailGalungan();
+      loadDaftarPeriodeGalungan();
+    } catch (err) { alert("❌ " + err.message); }
+  };
+}
+
+async function tutupPeriodeGalungan() {
+  if (!galPeriodeAktifId) return;
+  document.getElementById("modalBody").textContent = "Tutup periode ini? Statusnya akan berubah menjadi 'Selesai' dan tidak bisa ditandai bayar lagi.";
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+  document.getElementById("modalConfirmBtn").onclick = async () => {
+    closeModal();
+    try {
+      await writeAPI("tutupPeriodeGalungan", { periodeId: galPeriodeAktifId });
+      await refreshDetailGalungan();
+      loadDaftarPeriodeGalungan();
+    } catch (err) { alert("❌ " + err.message); }
+  };
+}
+
+function exportBayarGalungan() {
+  if (!galDataCache) return;
+  const { periode, sudahBayar, belumBayar } = galDataCache;
+  const rows = [];
+  sudahBayar.forEach(a => rows.push({
+    "Status"    : "Sudah Bayar",
+    "Nama"      : a.nama,
+    "Jabatan"   : a.jabatan || "Anggota",
+    "Tgl Bayar" : a.bayar?.tglBayar || "—",
+    "Nominal"   : a.bayar?.nominal || periode.nominal
+  }));
+  belumBayar.forEach(a => rows.push({
+    "Status"    : a.terlambat ? "Belum (Terlambat)" : "Belum Bayar",
+    "Nama"      : a.nama,
+    "Jabatan"   : a.jabatan || "Anggota",
+    "Tgl Bayar" : "—",
+    "Nominal"   : 0
+  }));
+  downloadExcel(rows, "Pembayaran_" + periode.nama.replace(/\s+/g,"_"));
 }
