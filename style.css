@@ -1541,3 +1541,21 @@ select.form-input { cursor: pointer; }
   color: #fff;
   box-shadow: 0 2px 8px rgba(30,43,74,.18);
 }
+
+/* ─── NIKEL (SANKSI KETERLAMBATAN) ──────────────────────── */
+.nikel-badge {
+  background: #FFF5F5;
+  border: 1.5px solid #FEB2B2;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: .8rem;
+  color: var(--red);
+  font-weight: 600;
+}
+.nikel-rincian {
+  font-size: .72rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.5;
+}

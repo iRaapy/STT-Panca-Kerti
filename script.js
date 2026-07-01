@@ -2938,17 +2938,25 @@ function renderTabelGalungan() {
   // Tabel belum bayar
   const tblB = document.getElementById("tblBelumBayar");
   if (!belumBayar.length) {
-    tblB.innerHTML = `<tr><td colspan="5" class="empty-row">🎉 Semua anggota sudah membayar!</td></tr>`;
+    tblB.innerHTML = `<tr><td colspan="6" class="empty-row">🎉 Semua anggota sudah membayar!</td></tr>`;
   } else {
     tblB.innerHTML = belumBayar.map((a, i) => {
       const terlambat = a.terlambat;
+      const nikelCell = terlambat && a.nikel
+        ? `<div class="nikel-badge">
+            ⚡ Kena Nikel: <strong>${formatRupiah(a.nikel.nilaiNikel)}</strong>
+            <div class="nikel-rincian">${a.nikel.rincian}</div>
+           </div>`
+        : terlambat
+          ? `<span class="terlambat-badge">⚠ Terlambat</span>`
+          : `<span style="color:var(--muted);font-size:.8rem;">Belum jatuh tempo</span>`;
       const aksiBtn = isSelesai ? "—" :
-        `<button class="btn-secondary-sm" style="font-size:.75rem;" onclick="modalTandaiBayarGalungan('${a.nama}')">✅ Tandai Bayar</button>`;
+        `<button class="btn-secondary-sm" style="font-size:.75rem;" onclick="modalTandaiBayarGalungan('${a.nama}', ${a.nikel ? a.nikel.nilaiNikel : 0}, ${terlambat})">✅ Tandai Bayar</button>`;
       return `<tr>
         <td>${i+1}</td>
         <td><strong>${a.nama}</strong></td>
         <td>${a.jabatan||"Anggota"}</td>
-        <td>${terlambat ? '<span class="terlambat-badge">⚠ Terlambat</span>' : '<span style="color:var(--muted);font-size:.8rem;">Belum jatuh tempo</span>'}</td>
+        <td>${nikelCell}</td>
         <td>${aksiBtn}</td>
       </tr>`;
     }).join("");
@@ -2979,16 +2987,27 @@ function switchTabGalungan(tab) {
   document.getElementById("panelSudah").classList.toggle("hidden", tab!=="sudah");
 }
 
-function modalTandaiBayarGalungan(nama) {
+function modalTandaiBayarGalungan(nama, nominalNikel = 0, kenaNikel = false) {
   if (!galPeriodeAktifId) return;
-  const nominal = galDataCache?.periode?.nominal || 0;
+  const nominalNormal = galDataCache?.periode?.nominal || 0;
+  const nominalBayar  = kenaNikel && nominalNikel > 0 ? nominalNikel : nominalNormal;
+  const pesanNikel    = kenaNikel && nominalNikel > 0
+    ? `<br><span style="color:var(--red);font-size:.85rem;">⚡ Kena nikel — total: <strong>${formatRupiah(nominalNikel)}</strong> (termasuk sanksi keterlambatan)</span>`
+    : "";
+
   document.getElementById("modalBody").innerHTML =
-    `Tandai <strong>${nama}</strong> sudah membayar iuran Galungan sebesar <strong>${formatRupiah(nominal)}</strong>?`;
+    `Tandai <strong>${nama}</strong> sudah membayar sebesar <strong>${formatRupiah(nominalBayar)}</strong>?${pesanNikel}`;
   document.getElementById("modalBackdrop").classList.remove("hidden");
   document.getElementById("modalConfirmBtn").onclick = async () => {
     closeModal();
     try {
-      await writeAPI("tandaiSudahBayarGalungan", { periodeId: galPeriodeAktifId, nama, nominal });
+      const ket = kenaNikel ? "Pembayaran termasuk nikel (sanksi keterlambatan)" : "";
+      await writeAPI("tandaiSudahBayarGalungan", {
+        periodeId: galPeriodeAktifId,
+        nama,
+        nominal: nominalBayar,
+        keterangan: ket
+      });
       await refreshDetailGalungan();
       loadDaftarPeriodeGalungan();
     } catch (err) { alert("❌ " + err.message); }
