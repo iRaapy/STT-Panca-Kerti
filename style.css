@@ -1512,3 +1512,32 @@ select.form-input { cursor: pointer; }
   font-size: .72rem; font-weight: 700;
   background: var(--red-bg); color: var(--red);
 }
+
+/* ─── TAB REKAP / GALUNGAN ──────────────────────────────── */
+.rekap-tab-switch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 5px;
+}
+.rekap-tab-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muted);
+  background: transparent;
+  transition: all .15s ease;
+}
+.rekap-tab-btn.active {
+  background: var(--navy);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(30,43,74,.18);
+}

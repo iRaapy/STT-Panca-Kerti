@@ -44,13 +44,12 @@ function navigateTo(page) {
   if (page === "dashboard") loadDashboard();
   if (page === "keuangan")  loadRingkasanKeuangan();
   if (page === "anggota")   loadAnggota();
-  if (page === "rekap")     initRekap();
+  if (page === "rekap")     { initRekap(); switchRekapTab("absen"); }
   if (page === "dokumen")   loadDokumen();
   if (page === "qr")        loadDaftarSesiQR();
   if (page === "event")     { kembaliKeListEvent(); loadDaftarEvent(); }
   if (page === "wagroup")   loadDatabaseNomorWA();
   if (page === "kalender")  loadKalender();
-  if (page === "galungan")  initGalungan();
   if (page === "ukuran")    initUkuranBaju();
   closeSidebar();
 }
@@ -561,6 +560,16 @@ document.getElementById("qrPanitiaBackdrop").addEventListener("click", function(
 
 // ═══ REKAP ABSENSI ════════════════════════════════════════
 let rekapNamaTerakhir = "";
+
+// Fungsi tab switcher antara panel Absensi/Dedosan dan panel Galungan
+function switchRekapTab(tab) {
+  const isAbsen   = tab === "absen";
+  document.getElementById("tabRekapAbsen").classList.toggle("active", isAbsen);
+  document.getElementById("tabRekapGalungan").classList.toggle("active", !isAbsen);
+  document.getElementById("panelRekapAbsen").classList.toggle("hidden", !isAbsen);
+  document.getElementById("panelRekapGalungan").classList.toggle("hidden", isAbsen);
+  if (!isAbsen) initGalungan();
+}
 
 function initRekap() {
   // Isi datalist nama anggota
